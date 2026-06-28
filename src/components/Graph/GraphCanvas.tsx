@@ -7,8 +7,6 @@ import {
   useNodesState,
   useEdgesState,
   type Connection,
-  type NodeDoubleClickEvent,
-  type EdgeMouseEvent,
   ReactFlowProvider,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -16,32 +14,22 @@ import ConceptNode from "./ConceptNode";
 import CustomEdge from "./CustomEdge";
 import { useUIStore } from "../../stores/useUIStore";
 import { MoveNodeCommand } from "../../commands/MoveNodeCommand";
-import { CreateEdgeCommand } from "../../commands/CreateEdgeCommand";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
 import type { ConverterService } from "../../services/ConverterService";
 import type { CommandHistoryService } from "../../services/CommandHistoryService";
-import type { NodeService } from "../../services/NodeService";
 import type { GraphService } from "../../services/GraphService";
 import type { NavigationService } from "../../services/NavigationService";
-import type { EdgeService } from "../../services/EdgeService";
 import type { Graph } from "../../types";
 
-const nodeTypes = {
-  concept: ConceptNode,
-};
-
-const edgeTypes = {
-  "custom-edge": CustomEdge,
-};
+const nodeTypes = { concept: ConceptNode };
+const edgeTypes = { "custom-edge": CustomEdge };
 
 interface GraphCanvasInnerProps {
   graph: Graph;
   converterService: ConverterService;
   commandHistoryService: CommandHistoryService;
-  nodeService: NodeService;
   graphService: GraphService;
   navigationService: NavigationService;
-  edgeService: EdgeService;
 }
 
 function GraphCanvasInner({
@@ -71,12 +59,12 @@ function GraphCanvasInner({
     (changes: any) => {
       for (const change of changes) {
         if (change.type === "position" && change.dragging === false) {
-          const node = nodes.find((n) => n.id === change.id);
+          const node = nodes.find((n: any) => n.id === change.id);
           if (node && change.position) {
             commandHistoryService.execute(
               new MoveNodeCommand(
                 graph.id,
-                node.data.nodeId,
+                (node.data as any).nodeId,
                 { x: node.position.x, y: node.position.y },
                 change.position,
               ),
@@ -93,10 +81,10 @@ function GraphCanvasInner({
     (changes: any) => {
       for (const change of changes) {
         if (change.type === "remove") {
-          const edge = edges.find((e) => e.id === change.id);
+          const edge = edges.find((e: any) => e.id === change.id);
           if (edge?.data?.edgeId) {
             commandHistoryService.execute(
-              new DeleteEdgeCommand(graph.id, edge.data.edgeId),
+              new DeleteEdgeCommand(graph.id, (edge.data as any).edgeId),
             );
           }
         }
@@ -115,8 +103,7 @@ function GraphCanvasInner({
   );
 
   const onNodeDoubleClick = useCallback(
-    (event: NodeDoubleClickEvent) => {
-      const node = event;
+    (_event: any, node: any) => {
       const data = node.data as any;
       if (data.childGraphId) {
         navigationService.navigateToGraph(data.childGraphId, data.nodeId);
@@ -126,7 +113,7 @@ function GraphCanvasInner({
   );
 
   const onEdgeClick = useCallback(
-    (_event: React.MouseEvent, edge: any) => {
+    (_event: any, edge: any) => {
       if (edge.data?.edgeId) {
         openRelationshipInspector(edge.data.edgeId);
       }

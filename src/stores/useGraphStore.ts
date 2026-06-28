@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Graph, Node, Edge, NodeView, EdgeView } from "../types";
+import type { Graph } from "../types";
 import type { ValidationIssue } from "../types";
 
 interface GraphState {

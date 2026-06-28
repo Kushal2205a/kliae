@@ -3,18 +3,18 @@ export const EDGE_SCHEMA_VERSION = 1;
 export const GRAPH_SCHEMA_VERSION = 1;
 
 export type RelationshipTypeId =
-  | "uses"
-  | "depends_on"
-  | "implements"
-  | "explains"
-  | "illustrates"
-  | "references"
-  | "contains"
-  | "compares_to"
-  | "produces"
-  | "returns"
-  | "optimized_by"
-  | "derived_from"
+  | "uses" | "used_by"
+  | "depends_on" | "depended_by"
+  | "implements" | "implemented_by"
+  | "explains" | "explained_by"
+  | "illustrates" | "illustrated_by"
+  | "references" | "referenced_by"
+  | "contains" | "contained_in"
+  | "compares_to" | "compared_with"
+  | "produces" | "produced_by"
+  | "returns" | "returned_by"
+  | "optimized_by" | "optimizes"
+  | "derived_from" | "derives"
   | "custom";
 
 export interface RelationshipDefinition {
@@ -77,4 +77,12 @@ export interface EdgeView {
   edgeId: string;
   graphId: string;
   color?: string;
+}
+
+export interface NodeDefinition {
+  id: string;
+  displayName: string;
+  icon: string;
+  defaultColor: string;
+  defaultData: () => Record<string, unknown>;
 }

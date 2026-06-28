@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
 import { EventBus } from "./services/EventBus";
 import { PluginRegistry } from "./services/PluginRegistry";
 import { WorkspaceService } from "./services/WorkspaceService";
@@ -13,12 +12,11 @@ import { AutosaveService } from "./services/AutosaveService";
 import { WorkspaceValidator } from "./services/WorkspaceValidator";
 import { CreateNodeCommand } from "./commands/CreateNodeCommand";
 import { CreateEdgeCommand } from "./commands/CreateEdgeCommand";
-import { CreateGraphCommand } from "./commands/CreateGraphCommand";
 import { useNavigationStore } from "./stores/useNavigationStore";
 import { useGraphStore } from "./stores/useGraphStore";
 import { useUIStore } from "./stores/useUIStore";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-import type { CommandContext, Command, Graph } from "./types";
+import type { CommandContext, Graph } from "./types";
 
 import WelcomeScreen from "./components/Welcome/WelcomeScreen";
 import CreateWorkspaceDialog from "./components/Welcome/CreateWorkspaceDialog";
@@ -98,9 +96,11 @@ export default function App() {
 
     autosaveService.start();
 
-    const unsubNavigated = eventBus.on("graph:navigated", (event) => {
-      if (event.payload.toGraphId) {
-        const graph = graphService.getGraph(event.payload.toGraphId);
+    const unsubNavigated = eventBus.on("graph:navigated", (e) => {
+      const event = e as any;
+      const toGraphId = event.payload.toGraphId;
+      if (toGraphId) {
+        const graph = graphService.getGraph(toGraphId);
         if (graph) {
           setCurrentGraph(graph);
           navStore.setCurrentGraphId(graph.id);
@@ -124,9 +124,8 @@ export default function App() {
 
       await s.workspaceService.create(path, name);
       const rootGraph = await s.graphService.create(name);
-      s.workspaceService.save();
+      await s.workspaceService.save();
       s.navigationService.reset(rootGraph.id);
-      s.converterService.toReactFlow(rootGraph);
 
       setWorkspaceName(name);
       setCurrentGraph(rootGraph);
@@ -165,7 +164,7 @@ export default function App() {
           if (entry.name?.endsWith(".json")) {
             const edgePath = await join(edgesDir, entry.name);
             try {
-              const edgeData = await readJSON(edgePath);
+              const edgeData: any = await readJSON(edgePath);
               s.edgeService.setEdge(edgeData);
             } catch {}
           }
@@ -198,25 +197,28 @@ export default function App() {
     [navStore],
   );
 
+  const refreshGraph = useCallback(() => {
+    const s = servicesRef.current;
+    if (!s) return;
+    const graphId = s.navigationService.getCurrentGraphId();
+    if (!graphId) return;
+    const graph = s.graphService.getGraph(graphId);
+    if (graph) setCurrentGraph({ ...graph });
+  }, []);
+
   const handleUndo = useCallback(() => {
     const s = servicesRef.current;
     if (!s) return;
     s.commandHistoryService.undo();
-    const graph = s.graphService.getGraph(s.navigationService.getCurrentGraphId() ?? "");
-    if (graph) {
-      setCurrentGraph({ ...graph });
-    }
-  }, []);
+    refreshGraph();
+  }, [refreshGraph]);
 
   const handleRedo = useCallback(() => {
     const s = servicesRef.current;
     if (!s) return;
     s.commandHistoryService.redo();
-    const graph = s.graphService.getGraph(s.navigationService.getCurrentGraphId() ?? "");
-    if (graph) {
-      setCurrentGraph({ ...graph });
-    }
-  }, []);
+    refreshGraph();
+  }, [refreshGraph]);
 
   const handleNavigateBreadcrumb = useCallback(
     (index: number) => {
@@ -234,9 +236,8 @@ export default function App() {
     if (!graphId) return;
     const cmd = new CreateNodeCommand(graphId, "New Concept");
     s.commandHistoryService.execute(cmd);
-    const graph = s.graphService.getGraph(graphId);
-    if (graph) setCurrentGraph({ ...graph });
-  }, []);
+    refreshGraph();
+  }, [refreshGraph]);
 
   const shortcuts = useMemo(
     () => ({
@@ -253,10 +254,8 @@ export default function App() {
 
   useKeyboardShortcuts(shortcuts);
 
-  const s = servicesRef.current;
-
   const handleCreateEdge = useCallback(
-    async (relationshipId: any, customLabel?: string) => {
+    async (relationshipId: string, customLabel?: string) => {
       const s = servicesRef.current;
       if (!s) return;
       const dialog = uiStore.createEdgeDialog;
@@ -265,17 +264,17 @@ export default function App() {
         s.navigationService.getCurrentGraphId() ?? "",
         dialog.sourceId,
         dialog.targetId,
-        relationshipId,
+        relationshipId as any,
         customLabel,
       );
-      await s.commandHistoryService.execute(cmd);
-      const graph = s.graphService.getGraph(s.navigationService.getCurrentGraphId() ?? "");
-      if (graph) setCurrentGraph({ ...graph });
+      await (s.commandHistoryService.execute as any)(cmd);
+      refreshGraph();
       uiStore.closeCreateEdgeDialog();
     },
-    [uiStore],
+    [uiStore, refreshGraph],
   );
 
+  const s = servicesRef.current;
   const recents = s?.workspaceService.getRecents() ?? [];
 
   if (view === "welcome") {
@@ -316,8 +315,9 @@ export default function App() {
     uiStore.createEdgeDialog.sourceId && s.nodeService.getNode(uiStore.createEdgeDialog.sourceId)?.label;
   const targetNodeName =
     uiStore.createEdgeDialog.targetId && s.nodeService.getNode(uiStore.createEdgeDialog.targetId)?.label;
-
   const issues = graphStore.validationIssues;
+  const sourceLabel = sourceNodeName ?? "";
+  const targetLabel = targetNodeName ?? "";
 
   return (
     <>
@@ -347,11 +347,8 @@ export default function App() {
           graph={currentGraph}
           converterService={s.converterService}
           commandHistoryService={s.commandHistoryService}
-          nodeService={s.nodeService}
           graphService={s.graphService}
           navigationService={s.navigationService}
-          edgeService={s.edgeService}
-          eventBus={s.eventBus}
         />
         <ValidationOverlay
           issues={issues}
@@ -359,10 +356,10 @@ export default function App() {
         />
       </AppShell>
 
-      {uiStore.createEdgeDialog.open && sourceNodeName !== undefined && targetNodeName !== undefined && (
+      {uiStore.createEdgeDialog.open && !!sourceLabel && !!targetLabel && (
         <EdgeCreationDialog
-          sourceLabel={sourceNodeName ?? "?"}
-          targetLabel={targetNodeName ?? "?"}
+          sourceLabel={sourceLabel}
+          targetLabel={targetLabel}
           onConfirm={handleCreateEdge}
           onCancel={() => uiStore.closeCreateEdgeDialog()}
         />

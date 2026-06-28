@@ -1,15 +1,4 @@
-import type { NodeProps } from "@xyflow/react";
-import type React from "react";
 import type { NodeDefinition } from "../types";
-
-export interface NodeDefinition {
-  id: string;
-  displayName: string;
-  icon: string;
-  defaultColor: string;
-  component: React.ComponentType<NodeProps>;
-  defaultData: () => Record<string, unknown>;
-}
 
 const BUILTIN_NODE_DEFINITIONS: NodeDefinition[] = [];
 

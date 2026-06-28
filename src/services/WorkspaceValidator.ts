@@ -2,24 +2,21 @@ import type { ValidationIssue } from "../types";
 import type { NodeService } from "./NodeService";
 import type { EdgeService } from "./EdgeService";
 import type { GraphService } from "./GraphService";
-import type { WorkspaceService } from "./WorkspaceService";
 
 export class WorkspaceValidator {
   private nodeService: NodeService;
   private edgeService: EdgeService;
   private graphService: GraphService;
-  private workspaceService: WorkspaceService;
 
   constructor(
     nodeService: NodeService,
     edgeService: EdgeService,
     graphService: GraphService,
-    workspaceService: WorkspaceService,
+    _workspaceService: any,
   ) {
     this.nodeService = nodeService;
     this.edgeService = edgeService;
     this.graphService = graphService;
-    this.workspaceService = workspaceService;
   }
 
   validateAll(): ValidationIssue[] {

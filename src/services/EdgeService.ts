@@ -1,7 +1,7 @@
 import type { Edge, EdgeView, RelationshipTypeId } from "../types";
 import { EDGE_SCHEMA_VERSION } from "../types";
 import { generateId } from "../utils/idGenerator";
-import { readJSON, writeJSON, exists, remove } from "../utils/fileSystem";
+import { writeJSON, exists, remove } from "../utils/fileSystem";
 import type { WorkspaceService } from "./WorkspaceService";
 import type { EventBus } from "./EventBus";
 

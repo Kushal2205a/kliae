@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { BookOpen, FolderOpen, Clock } from "lucide-react";
 import type { RecentWorkspace } from "../../types";
 

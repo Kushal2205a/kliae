@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 
 interface OpenWorkspaceDialogProps {
@@ -10,8 +9,6 @@ export default function OpenWorkspaceDialog({
   onConfirm,
   onCancel,
 }: OpenWorkspaceDialogProps) {
-  const [error, setError] = useState<string | null>(null);
-
   const handleBrowse = async () => {
     const selected = await open({
       directory: true,
@@ -31,8 +28,6 @@ export default function OpenWorkspaceDialog({
         <p className="text-sm text-white/50 mb-4">
           Select the folder containing a workspace manifest.json file.
         </p>
-
-        {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
 
         <div className="flex justify-end gap-3">
           <button

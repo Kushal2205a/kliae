@@ -1,6 +1,5 @@
 import { readTextFile, writeTextFile, exists, mkdir, remove, readDir } from "@tauri-apps/plugin-fs";
 
-export type { FileEntry } from "@tauri-apps/plugin-fs";
 export { exists, mkdir, remove, readDir };
 
 export async function readJSON<T>(path: string): Promise<T> {

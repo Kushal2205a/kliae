@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { BUILTIN_RELATIONSHIPS } from "../../constants/relationships";
-import type { RelationshipTypeId } from "../../types";
 
 interface EdgeCreationDialogProps {
   sourceLabel: string;
   targetLabel: string;
-  onConfirm: (relationshipId: RelationshipTypeId, customLabel?: string) => void;
+  onConfirm: (relationshipId: string, customLabel?: string) => void;
   onCancel: () => void;
 }
 
@@ -19,10 +18,7 @@ export default function EdgeCreationDialog({
   const [customLabel, setCustomLabel] = useState("");
 
   const handleConfirm = () => {
-    onConfirm(
-      selectedId as RelationshipTypeId,
-      selectedId === "custom" ? customLabel : undefined,
-    );
+    onConfirm(selectedId, selectedId === "custom" ? customLabel : undefined);
   };
 
   return (

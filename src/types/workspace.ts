@@ -1,5 +1,3 @@
-import { type } from "os";
-
 export const WORKSPACE_SCHEMA_VERSION = 1;
 
 export interface WorkspaceManifest {

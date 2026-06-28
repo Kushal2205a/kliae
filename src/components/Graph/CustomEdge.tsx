@@ -1,18 +1,10 @@
-import { memo, useState, useCallback } from "react";
+import { memo } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
   type EdgeProps,
 } from "@xyflow/react";
-
-interface CustomEdgeData {
-  edgeId: string;
-  relationshipType: string;
-  displayLabel: string;
-  description?: string;
-  color?: string;
-}
 
 function CustomEdge({
   id,
@@ -24,7 +16,7 @@ function CustomEdge({
   targetPosition,
   data,
   selected,
-}: EdgeProps<CustomEdgeData>) {
+}: EdgeProps) {
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
     sourceY,
@@ -34,8 +26,9 @@ function CustomEdge({
     targetPosition,
   });
 
-  const color = data?.color ?? "#6b7280";
-  const label = data?.displayLabel ?? "";
+  const edgeData = data as any;
+  const color = edgeData?.color ?? "#6b7280";
+  const label = edgeData?.displayLabel ?? "";
 
   return (
     <>

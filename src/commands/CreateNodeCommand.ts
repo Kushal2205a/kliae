@@ -7,18 +7,18 @@ export class CreateNodeCommand implements Command {
 
   private graphId: string;
   private nodeId?: string;
-  private label: string;
+  private nodeLabel: string;
   private position?: { x: number; y: number };
 
-  constructor(graphId: string, label: string, position?: { x: number; y: number }) {
+  constructor(graphId: string, nodeLabel: string, position?: { x: number; y: number }) {
     this.graphId = graphId;
-    this.label = label;
+    this.nodeLabel = nodeLabel;
     this.position = position;
   }
 
   async execute(ctx: CommandContext): Promise<void> {
     const result = await ctx.nodeService.create(this.graphId, {
-      label: this.label,
+      label: this.nodeLabel,
     });
 
     this.nodeId = result.node.id;

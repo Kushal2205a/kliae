@@ -1,9 +1,9 @@
 import type { Node, NodeView } from "../types";
 import { NODE_SCHEMA_VERSION } from "../types";
 import { generateId } from "../utils/idGenerator";
-import { readJSON, writeJSON, exists, remove, ensureDir } from "../utils/fileSystem";
+import { writeJSON, exists, remove, ensureDir } from "../utils/fileSystem";
+import { readJSON } from "../utils/fileSystem";
 import type { WorkspaceService } from "./WorkspaceService";
-import { join } from "@tauri-apps/api/path";
 import type { EventBus } from "./EventBus";
 
 export class NodeService {

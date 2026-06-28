@@ -1,4 +1,4 @@
-import type { Node, Edge, Graph } from "../types";
+import type { Graph } from "../types";
 import type { NodeService } from "./NodeService";
 import type { EdgeService } from "./EdgeService";
 import { resolveRelationshipLabel, getRelationshipColor } from "../constants/relationships";
@@ -74,7 +74,6 @@ export class ConverterService {
       if (!edge) continue;
 
       const displayLabel = resolveRelationshipLabel(edge.relationship);
-      const color = getRelationshipColor(edge.relationship);
 
       edges.push({
         id: edge.id,
@@ -86,7 +85,7 @@ export class ConverterService {
           relationshipType: edge.relationship.id,
           displayLabel,
           description: edge.description,
-          color,
+          color: getRelationshipColor(edge.relationship),
         },
         label: displayLabel,
       });

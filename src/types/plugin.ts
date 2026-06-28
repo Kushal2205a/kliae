@@ -1,7 +1,6 @@
 import type React from "react";
 import type { NodeProps, EdgeProps } from "@xyflow/react";
 import type { Command } from "./command";
-import type { AppEvent } from "./event";
 import type { Node, Edge, Graph } from "./graph";
 import type { WorkspaceManifest } from "./workspace";
 import type { EventBus } from "../services/EventBus";

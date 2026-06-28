@@ -10,7 +10,6 @@ export default function ValidationOverlay({ issues, onDismiss }: ValidationOverl
   if (issues.length === 0) return null;
 
   const errors = issues.filter((i) => i.severity === "error");
-  const warnings = issues.filter((i) => i.severity === "warning");
 
   return (
     <div className="absolute bottom-4 left-4 right-4 z-40">

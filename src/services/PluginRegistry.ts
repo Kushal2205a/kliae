@@ -1,7 +1,6 @@
 import type React from "react";
 import type { NodeProps, EdgeProps } from "@xyflow/react";
-import type { Plugin, PluginContext, Command, Node, Edge, Graph } from "../types";
-import type { WorkspaceManifest } from "../types/workspace";
+import type { Plugin, PluginContext, Command } from "../types";
 import type { EventBus } from "./EventBus";
 import type { NodeService } from "./NodeService";
 import type { EdgeService } from "./EdgeService";
@@ -41,69 +40,50 @@ export class PluginRegistry {
     };
 
     eventBus.on("node:created", (event) => {
-      if ("onNodeCreated" in event) return;
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onNodeCreated) {
-          plugin.onNodeCreated(event.payload.node);
-        }
-      }
+      this.callPluginHooks("onNodeCreated", (p) => p.onNodeCreated?.((event as any).payload.node));
     });
 
     eventBus.on("node:deleted", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onNodeDeleted) {
-          plugin.onNodeDeleted(event.payload.nodeId);
-        }
-      }
+      this.callPluginHooks("onNodeDeleted", (p) => p.onNodeDeleted?.((event as any).payload.nodeId));
     });
 
     eventBus.on("node:updated", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onNodeUpdated) {
-          plugin.onNodeUpdated(event.payload.nodeId, event.payload.changes);
-        }
-      }
+      this.callPluginHooks("onNodeUpdated", (p) =>
+        p.onNodeUpdated?.((event as any).payload.nodeId, (event as any).payload.changes),
+      );
     });
 
     eventBus.on("edge:created", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onEdgeCreated) {
-          plugin.onEdgeCreated(event.payload.edge);
-        }
-      }
+      this.callPluginHooks("onEdgeCreated", (p) => p.onEdgeCreated?.((event as any).payload.edge));
     });
 
     eventBus.on("edge:deleted", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onEdgeDeleted) {
-          plugin.onEdgeDeleted(event.payload.edgeId);
-        }
-      }
+      this.callPluginHooks("onEdgeDeleted", (p) => p.onEdgeDeleted?.((event as any).payload.edgeId));
     });
 
     eventBus.on("edge:updated", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onEdgeUpdated) {
-          plugin.onEdgeUpdated(event.payload.edgeId, event.payload.changes);
-        }
-      }
+      this.callPluginHooks("onEdgeUpdated", (p) =>
+        p.onEdgeUpdated?.((event as any).payload.edgeId, (event as any).payload.changes),
+      );
     });
 
     eventBus.on("graph:created", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onGraphChanged) {
-          plugin.onGraphChanged(event.payload.graph.id, event.payload.graph);
-        }
-      }
+      this.callPluginHooks("onGraphChanged", (p) =>
+        p.onGraphChanged?.((event as any).payload.graph.id, (event as any).payload.graph),
+      );
     });
 
     eventBus.on("workspace:opened", (event) => {
-      for (const plugin of this.plugins.values()) {
-        if (plugin.onWorkspaceOpened) {
-          plugin.onWorkspaceOpened(event.payload.manifest);
-        }
-      }
+      this.callPluginHooks("onWorkspaceOpened", (p) =>
+        p.onWorkspaceOpened?.((event as any).payload.manifest),
+      );
     });
+  }
+
+  private callPluginHooks(_hook: string, fn: (plugin: Plugin) => void): void {
+    for (const plugin of this.plugins.values()) {
+      fn(plugin);
+    }
   }
 
   register(plugin: Plugin): void {

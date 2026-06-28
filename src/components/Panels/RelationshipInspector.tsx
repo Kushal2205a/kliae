@@ -1,16 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { X, Trash2 } from "lucide-react";
-import type { Edge, RelationshipTypeId } from "../../types";
+import type { Edge } from "../../types";
 import type { EdgeService } from "../../services/EdgeService";
 import type { NodeService } from "../../services/NodeService";
 import type { CommandHistoryService } from "../../services/CommandHistoryService";
 import { UpdateEdgeCommand } from "../../commands/UpdateEdgeCommand";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
-import {
-  BUILTIN_RELATIONSHIPS,
-  resolveRelationshipLabel,
-} from "../../constants/relationships";
-import type { Graph } from "../../types";
+import { BUILTIN_RELATIONSHIPS, resolveRelationshipLabel } from "../../constants/relationships";
 
 interface RelationshipInspectorProps {
   edgeId: string;
@@ -33,7 +29,7 @@ export default function RelationshipInspector({
   const sourceNode = edge ? nodeService.getNode(edge.sourceId) : undefined;
   const targetNode = edge ? nodeService.getNode(edge.targetId) : undefined;
 
-  const [relationshipId, setRelationshipId] = useState(edge?.relationship.id ?? "uses");
+  const [relationshipId, setRelationshipId] = useState<string>(edge?.relationship.id ?? "uses");
   const [customLabel, setCustomLabel] = useState(edge?.relationship.customLabel ?? "");
   const [description, setDescription] = useState(edge?.description ?? "");
 
@@ -47,13 +43,13 @@ export default function RelationshipInspector({
 
   const handleSave = useCallback(() => {
     if (!edge) return;
-    const oldData = {
+    const oldData: Partial<Edge> = {
       relationship: { ...edge.relationship },
       description: edge.description,
     };
     const newData: Partial<Edge> = {
       relationship: {
-        id: relationshipId as RelationshipTypeId,
+        id: relationshipId as any,
         customLabel: relationshipId === "custom" ? customLabel : undefined,
       },
       description: description || undefined,
@@ -99,8 +95,7 @@ export default function RelationshipInspector({
         <label className="block text-xs text-white/50 mb-1">Type</label>
         <select
           value={relationshipId}
-          onChange={(e) => setRelationshipId(e.target.value)}
-          onBlur={handleSave}
+          onChange={(e) => { setRelationshipId(e.target.value); handleSave(); }}
           className="w-full px-3 py-2 rounded-lg bg-[#13131a] border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
         >
           {BUILTIN_RELATIONSHIPS.map((rel) => (

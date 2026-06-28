@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Search, PanelRightOpen, Save } from "lucide-react";
+import { Undo2, Redo2, Search } from "lucide-react";
 import Breadcrumbs from "../Navigation/Breadcrumbs";
 import type { Breadcrumb } from "../../types";
 
