@@ -1,13 +1,37 @@
 @import "tailwindcss";
 
+:root {
+  --app-bg: #0a0a0a;
+  --app-surface: #141414;
+  --app-surface-2: #1c1c1c;
+  --app-panel: rgba(20, 20, 20, 0.88);
+  --app-border: rgba(255, 255, 255, 0.1);
+  --app-text: #f5f5f5;
+  --app-muted: rgba(245, 245, 245, 0.58);
+  --app-grid: rgba(255, 255, 255, 0.14);
+  --app-accent: #a1a1aa;
+}
+
+[data-theme="light"] {
+  --app-bg: #f5f5f5;
+  --app-surface: #ffffff;
+  --app-surface-2: #ececec;
+  --app-panel: rgba(255, 255, 255, 0.9);
+  --app-border: rgba(0, 0, 0, 0.12);
+  --app-text: #181818;
+  --app-muted: rgba(20, 20, 20, 0.6);
+  --app-grid: rgba(0, 0, 0, 0.12);
+  --app-accent: #52525b;
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #13131a;
-  color: #ffffff;
+  background: var(--app-bg);
+  color: var(--app-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
@@ -31,11 +55,36 @@ html, body, #root {
 }
 
 .react-flow__controls button {
-  fill: #ffffff60;
-  stroke: #ffffff60;
+  fill: var(--app-muted);
+  stroke: var(--app-muted);
+}
+
+.react-flow__controls {
+  border: 1px solid var(--app-border) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+}
+
+.react-flow__controls button {
+  background: var(--app-panel) !important;
+  border-bottom: 1px solid var(--app-border) !important;
 }
 
 .react-flow__minimap {
-  border-radius: 8px;
+  right: 18px !important;
+  bottom: 18px !important;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
   overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  opacity: 0.92;
+}
+
+.react-flow__node {
+  transition: filter 160ms ease, box-shadow 160ms ease;
+}
+
+.react-flow__node:hover {
+  filter: brightness(1.04);
 }
