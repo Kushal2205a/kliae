@@ -51,7 +51,7 @@ export class NodeService {
       nodeId,
       graphId,
       position: { x: 0, y: 0 },
-      color: "#3b82f6",
+      color: "#71717a",
     };
 
     this.nodes.set(nodeId, node);
@@ -141,7 +141,7 @@ export class NodeService {
 async function persistNode(node: Node, workspaceService: WorkspaceService): Promise<void> {
   const nodePath = await workspaceService.nodePath(node.id);
   const dir = nodePath.substring(0, nodePath.lastIndexOf("/"));
-  await ensureDir(dir.replace("\\", "/"));
+  await ensureDir(dir);
   await writeJSON(nodePath, node);
 }
 
