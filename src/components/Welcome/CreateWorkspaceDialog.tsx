@@ -50,7 +50,7 @@ export default function CreateWorkspaceDialog({
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[#13131a] border border-white/10 text-white text-sm focus:outline-none focus:border-blue-500/50"
+              className="w-full px-3 py-2 rounded-lg bg-[#13131a] border border-white/10 text-white text-sm focus:outline-none focus:border-white/20"
               placeholder="My Knowledge Graph"
               autoFocus
             />
