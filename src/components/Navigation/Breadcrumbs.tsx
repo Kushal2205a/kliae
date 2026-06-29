@@ -29,10 +29,7 @@ export default function Breadcrumbs({ breadcrumbs, onNavigate }: BreadcrumbsProp
                 {crumb.graphName}
               </span>
             ) : (
-              <span>
-                {crumb.nodeLabel && <span className="opacity-50">{crumb.nodeLabel} / </span>}
-                {crumb.graphName}
-              </span>
+              <span>{crumb.nodeLabel ?? crumb.graphName}</span>
             )}
           </button>
         </div>
