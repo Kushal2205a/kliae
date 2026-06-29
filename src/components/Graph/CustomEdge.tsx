@@ -6,6 +6,10 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 
+const LABEL_OFFSET_Y = 14;
+const EDGE_LABEL_BG_ALPHA = "15";
+const EDGE_LABEL_SELECTED_BG_ALPHA = "28";
+
 function CustomEdge({
   id,
   sourceX,
@@ -27,14 +31,17 @@ function CustomEdge({
   });
 
   const edgeData = data as any;
-  const color = edgeData?.color ?? "#6b7280";
+  const color = edgeData?.color ?? "#71717a";
   const label = edgeData?.displayLabel ?? "";
+  const relationshipType = edgeData?.relationshipType ?? "custom";
+  const markerEnd = `url(#edge-arrow-${relationshipType})`;
 
   return (
     <>
       <BaseEdge
         id={id}
         path={edgePath}
+        markerEnd={markerEnd}
         style={{
           stroke: color,
           strokeWidth: selected ? 2.5 : 1.5,
@@ -46,10 +53,10 @@ function CustomEdge({
           <div
             className="absolute px-2 py-0.5 rounded text-xs font-medium pointer-events-none"
             style={{
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              backgroundColor: `${color}20`,
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY - LABEL_OFFSET_Y}px)`,
+              backgroundColor: `${color}${selected ? EDGE_LABEL_SELECTED_BG_ALPHA : EDGE_LABEL_BG_ALPHA}`,
               color: color,
-              border: `1px solid ${color}40`,
+              border: `1px solid ${color}${selected ? "70" : "40"}`,
               maxWidth: 200,
               overflow: "hidden",
               textOverflow: "ellipsis",
