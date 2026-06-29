@@ -1,6 +1,6 @@
 export const NODE_SCHEMA_VERSION = 1;
-export const EDGE_SCHEMA_VERSION = 1;
-export const GRAPH_SCHEMA_VERSION = 1;
+export const EDGE_SCHEMA_VERSION = 2;
+export const GRAPH_SCHEMA_VERSION = 3;
 
 export type RelationshipTypeId =
   | "uses" | "used_by"
@@ -29,6 +29,7 @@ export interface Node {
   id: string;
   type: string;
   label: string;
+  content?: NodeContentDocument;
   tags: string[];
   childGraphId?: string;
   contentId?: string;
@@ -36,11 +37,52 @@ export interface Node {
   updatedAt: string;
 }
 
+export interface NodeContentDocument {
+  schemaVersion: 1;
+  blocks: NodeContentBlock[];
+}
+
+export type NodeContentBlock =
+    | ParagraphContentBlock
+    | RichTextContentBlock
+    | ImageContentBlock;
+
+export interface ParagraphContentBlock {
+  id: string;
+  type: "paragraph";
+  text: string;
+  listStyle?: "bullet" | "number";
+  strikethrough?: boolean;
+}
+
+export interface RichTextContentBlock {
+  id: string;
+  type: "richtext";
+  editorState: string;
+}
+
+
+export interface CodeContentBlock {
+  id: string;
+  type: "code";
+  language?: string;
+  text: string;
+}
+
+export interface ImageContentBlock {
+  id: string;
+  type: "image";
+  src: string;
+  alt?: string;
+}
+
 export interface Edge {
   schemaVersion: typeof EDGE_SCHEMA_VERSION;
   id: string;
   sourceId: string;
   targetId: string;
+  sourceHandle?: string;
+  targetHandle?: string;
   relationship: {
     id: RelationshipTypeId;
     customLabel?: string;
@@ -49,6 +91,37 @@ export interface Edge {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CanvasObjectStyle {
+  fill: string;
+  stroke: string;
+  strokeWidth: number;
+  opacity: number;
+  borderRadius: number;
+}
+
+export interface CanvasObject {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  zIndex: number;
+  style: CanvasObjectStyle;
+  text?: string;
+  properties?: Record<string, unknown>;
+}
+
+export const DEFAULT_CANVAS_STYLE: CanvasObjectStyle = {
+  fill: "rgba(161, 161, 170, 0.10)",
+  stroke: "rgba(212, 212, 216, 0.85)",
+  strokeWidth: 2,
+  opacity: 1,
+  borderRadius: 8,
+};
+
+export type DragOverride = Partial<{ x: number; y: number; width: number; height: number }>;
 
 export interface Graph {
   schemaVersion: typeof GRAPH_SCHEMA_VERSION;
@@ -60,6 +133,9 @@ export interface Graph {
   views: {
     nodeViews: Record<string, NodeView>;
     edgeViews: Record<string, EdgeView>;
+  };
+  canvas: {
+    objects: CanvasObject[];
   };
 }
 
