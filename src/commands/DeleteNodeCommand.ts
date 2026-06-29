@@ -38,7 +38,17 @@ export class DeleteNodeCommand implements Command {
       }
     }
 
+    console.log(
+      "Delete command graph:",
+      this.graphId,
+      ctx.graphService.getGraph(this.graphId)?.nodeIds
+    );
+
     ctx.graphService.removeNodeId(this.graphId, this.nodeId);
+    console.log(
+      "After remove:",
+      ctx.graphService.getGraph(this.graphId)?.nodeIds
+    );
     ctx.nodeService.delete(this.nodeId);
   }
 
