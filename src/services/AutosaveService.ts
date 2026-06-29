@@ -1,18 +1,21 @@
 import type { EventBus } from "./EventBus";
 import type { GraphService } from "./GraphService";
 import type { WorkspaceService } from "./WorkspaceService";
+import type { NavigationService } from "./NavigationService";
 
 export class AutosaveService {
   private eventBus: EventBus;
   private graphService: GraphService;
   private workspaceService: WorkspaceService;
+  private navigationService: NavigationService;
   private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private unsubscribe: (() => void)[] = [];
 
-  constructor(eventBus: EventBus, graphService: GraphService, workspaceService: WorkspaceService) {
+  constructor(eventBus: EventBus, graphService: GraphService, workspaceService: WorkspaceService, navigationService: NavigationService) {
     this.eventBus = eventBus;
     this.graphService = graphService;
     this.workspaceService = workspaceService;
+    this.navigationService = navigationService;
   }
 
   start(): void {
@@ -86,6 +89,6 @@ export class AutosaveService {
   }
 
   private getCurrentGraphId(): string | undefined {
-    return undefined;
+    return this.navigationService.getCurrentGraphId();
   }
 }
