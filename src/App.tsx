@@ -7,16 +7,22 @@ import { EdgeService } from "./services/EdgeService";
 import { GraphService } from "./services/GraphService";
 import { NavigationService } from "./services/NavigationService";
 import { ConverterService } from "./services/ConverterService";
+import LexicalEditor from "./components/Editor/LexicalEditor";
 import { CommandHistoryService } from "./services/CommandHistoryService";
 import { AutosaveService } from "./services/AutosaveService";
 import { WorkspaceValidator } from "./services/WorkspaceValidator";
 import { CreateNodeCommand } from "./commands/CreateNodeCommand";
 import { CreateEdgeCommand } from "./commands/CreateEdgeCommand";
+import { CreateGraphCommand } from "./commands/CreateGraphCommand";
+import { UpdateNodeCommand } from "./commands/UpdateNodeCommand";
+import { DeleteNodeCommand } from "./commands/DeleteNodeCommand";
+import { ResizeNodeCommand } from "./commands/ResizeNodeCommand";
+import type { CanvasTool } from "./stores/useUIStore";
 import { useNavigationStore } from "./stores/useNavigationStore";
 import { useGraphStore } from "./stores/useGraphStore";
 import { useUIStore } from "./stores/useUIStore";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
-import type { CommandContext, Graph } from "./types";
+import type { CommandContext, Graph, Node, NodeContentDocument } from "./types";
 
 import WelcomeScreen from "./components/Welcome/WelcomeScreen";
 import CreateWorkspaceDialog from "./components/Welcome/CreateWorkspaceDialog";
@@ -28,8 +34,7 @@ import EdgeCreationDialog from "./components/Panels/EdgeCreationDialog";
 import CommandPalette from "./components/CommandPalette/CommandPalette";
 import ValidationOverlay from "./components/Validation/ValidationOverlay";
 import { join } from "@tauri-apps/api/path";
-import { exists, readDir } from "@tauri-apps/plugin-fs";
-import { readJSON } from "./utils/fileSystem";
+import { exists, readDir, readJSON } from "./utils/fileSystem";
 import { loadGraph } from "./services/GraphService";
 import { loadNode } from "./services/NodeService";
 
@@ -39,6 +44,7 @@ export default function App() {
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("Knowledge Graph");
   const [currentGraph, setCurrentGraph] = useState<Graph | null>(null);
+  const [servicesReady, setServicesReady] = useState(false);
 
   const servicesRef = useRef<{
     eventBus: EventBus;
@@ -57,6 +63,9 @@ export default function App() {
   const navStore = useNavigationStore();
   const graphStore = useGraphStore();
   const uiStore = useUIStore();
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", uiStore.themeMode);
+  }, [uiStore.themeMode]);
 
   useEffect(() => {
     const eventBus = new EventBus();
@@ -77,7 +86,7 @@ export default function App() {
       navigationService,
     };
     const commandHistoryService = new CommandHistoryService(commandCtx);
-    const autosaveService = new AutosaveService(eventBus, graphService, workspaceService);
+    const autosaveService = new AutosaveService(eventBus, graphService, workspaceService, navigationService);
     const pluginRegistry = new PluginRegistry(eventBus, nodeService, edgeService, graphService, navigationService);
 
     servicesRef.current = {
@@ -95,6 +104,7 @@ export default function App() {
     };
 
     autosaveService.start();
+    setServicesReady(true);
 
     const unsubNavigated = eventBus.on("graph:navigated", (e) => {
       const event = e as any;
@@ -122,8 +132,9 @@ export default function App() {
       const s = servicesRef.current;
       if (!s) return;
 
-      await s.workspaceService.create(path, name);
+      const manifest = await s.workspaceService.create(path, name);
       const rootGraph = await s.graphService.create(name);
+      manifest.rootGraphId = rootGraph.id;
       await s.workspaceService.save();
       s.navigationService.reset(rootGraph.id);
 
@@ -142,57 +153,101 @@ export default function App() {
       const s = servicesRef.current;
       if (!s) return;
 
+      console.log("[open-workspace] step 1: opening workspace at", path);
       await s.workspaceService.open(path);
       const manifest = s.workspaceService.getManifest();
-      if (!manifest) return;
+      if (!manifest) {
+        console.warn("[open-workspace] step 1 FAILED: manifest is null");
+        return;
+      }
+      console.log("[open-workspace] step 2: manifest loaded", { name: manifest.name, rootGraphId: manifest.rootGraphId });
 
       const nodesDir = await join(path, "nodes");
+      console.log("[open-workspace] step 3: loading nodes from", nodesDir);
       if (await exists(nodesDir)) {
         const entries = await readDir(nodesDir);
+        console.log("[open-workspace] step 3b: found", entries.length, "files in nodes dir");
         for (const entry of entries) {
           if (entry.name?.endsWith(".json")) {
             const nodePath = await join(nodesDir, entry.name);
-            await loadNode(nodePath, s.nodeService);
+            const result = await loadNode(nodePath, s.nodeService);
+            console.log("[open-workspace] step 3c: loaded node", entry.name, result ? "ok" : "FAILED");
           }
         }
+      } else {
+        console.warn("[open-workspace] step 3: nodes dir does not exist");
       }
 
       const edgesDir = await join(path, "edges");
+      console.log("[open-workspace] step 4: loading edges from", edgesDir);
       if (await exists(edgesDir)) {
         const entries = await readDir(edgesDir);
+        console.log("[open-workspace] step 4b: found", entries.length, "files in edges dir");
         for (const entry of entries) {
           if (entry.name?.endsWith(".json")) {
             const edgePath = await join(edgesDir, entry.name);
             try {
               const edgeData: any = await readJSON(edgePath);
               s.edgeService.setEdge(edgeData);
-            } catch {}
+              console.log("[open-workspace] step 4c: loaded edge", entry.name);
+            } catch (e) {
+              console.warn("[open-workspace] step 4c: failed to load edge", entry.name, e);
+            }
           }
         }
+      } else {
+        console.warn("[open-workspace] step 4: edges dir does not exist");
       }
 
       const graphsDir = await join(path, "graphs");
+      console.log("[open-workspace] step 5: loading graphs from", graphsDir);
       if (await exists(graphsDir)) {
         const entries = await readDir(graphsDir);
+        console.log("[open-workspace] step 5b: found", entries.length, "files in graphs dir");
         for (const entry of entries) {
           if (entry.name?.endsWith(".json")) {
             const graphPath = await join(graphsDir, entry.name);
-            await loadGraph(graphPath, s.graphService);
+            const result = await loadGraph(graphPath, s.graphService);
+            console.log("[open-workspace] step 5c: loaded graph", entry.name, result ? `ok (id=${result.id}, parentNodeId=${result.parentNodeId})` : "FAILED");
           }
+        }
+      } else {
+        console.warn("[open-workspace] step 5: graphs dir does not exist");
+      }
+
+      console.log("[open-workspace] step 6: looking up root graph by manifest.rootGraphId =", manifest.rootGraphId);
+      let rootGraph = s.graphService.getGraph(manifest.rootGraphId);
+      console.log("[open-workspace] step 6 result:", rootGraph ? `found (name=${rootGraph.name})` : "NOT FOUND");
+
+      if (!rootGraph) {
+        const allGraphs = s.graphService.getAllGraphs();
+        console.log("[open-workspace] step 6 fallback: total graphs loaded =", allGraphs.length);
+        const rootCandidate = allGraphs.find((g) => !g.parentNodeId);
+        if (rootCandidate) {
+          console.log("[open-workspace] step 6 fallback: using graph without parentNodeId:", rootCandidate.id, rootCandidate.name);
+          rootGraph = rootCandidate;
+        } else if (allGraphs.length > 0) {
+          console.log("[open-workspace] step 6 fallback: using first available graph:", allGraphs[0].id, allGraphs[0].name);
+          rootGraph = allGraphs[0];
+        } else {
+          console.error("[open-workspace] step 6 fallback FAILED: no graphs loaded at all");
         }
       }
 
-      const rootGraph = s.graphService.getGraph(manifest.rootGraphId);
       if (rootGraph) {
         s.navigationService.reset(rootGraph.id);
         setCurrentGraph(rootGraph);
         navStore.setCurrentGraphId(rootGraph.id);
         navStore.setBreadcrumbs([{ graphId: rootGraph.id, graphName: rootGraph.name }]);
+        console.log("[open-workspace] step 7: navigation initialized, currentGraph set");
+      } else {
+        console.error("[open-workspace] step 7 FAILED: no root graph available, will show loading screen");
       }
 
       setWorkspaceName(manifest.name);
       setView("workspace");
       setShowOpenDialog(false);
+      console.log("[open-workspace] step 8: view switched to workspace");
     },
     [navStore],
   );
@@ -203,20 +258,25 @@ export default function App() {
     const graphId = s.navigationService.getCurrentGraphId();
     if (!graphId) return;
     const graph = s.graphService.getGraph(graphId);
+    console.log(
+      "Refresh graph object",
+      graph
+    );
+    console.log("Graph nodeIds:", graph?.nodeIds);
     if (graph) setCurrentGraph({ ...graph });
   }, []);
 
-  const handleUndo = useCallback(() => {
+  const handleUndo = useCallback(async () => {
     const s = servicesRef.current;
     if (!s) return;
-    s.commandHistoryService.undo();
+    await s.commandHistoryService.undo();
     refreshGraph();
   }, [refreshGraph]);
 
-  const handleRedo = useCallback(() => {
+  const handleRedo = useCallback(async () => {
     const s = servicesRef.current;
     if (!s) return;
-    s.commandHistoryService.redo();
+    await s.commandHistoryService.redo();
     refreshGraph();
   }, [refreshGraph]);
 
@@ -229,13 +289,123 @@ export default function App() {
     [],
   );
 
-  const handleCreateNode = useCallback(() => {
+  const handleRenameNode = useCallback(
+    async (nodeId: string, newLabel: string) => {
+      const s = servicesRef.current;
+      if (!s) return;
+      const node = s.nodeService.getNode(nodeId);
+      if (!node) return;
+      const oldData: Partial<Node> = { label: node.label };
+      const newData: Partial<Node> = { label: newLabel };
+      await s.commandHistoryService.execute(new UpdateNodeCommand(nodeId, oldData, newData));
+      refreshGraph();
+    },
+    [refreshGraph],
+  );
+
+  const handleAddNodeContent = useCallback(
+    async (nodeId: string) => {
+      const s = servicesRef.current;
+      if (!s) return;
+      const node = s.nodeService.getNode(nodeId);
+      if (!node || node.content) return;
+
+      const content: NodeContentDocument = {
+        schemaVersion: 1,
+        blocks: [{ id: crypto.randomUUID(), type: "paragraph", text: "" }],
+      };
+
+      await s.commandHistoryService.execute(
+        new UpdateNodeCommand(nodeId, { content: node.content }, { content }),
+      );
+      refreshGraph();
+    },
+    [refreshGraph],
+  );
+
+  const handleUpdateNodeContent = useCallback(
+    async (nodeId: string, content: NodeContentDocument) => {
+      const s = servicesRef.current;
+      if (!s) return;
+      const node = s.nodeService.getNode(nodeId);
+      if (!node) return;
+
+      await s.commandHistoryService.execute(
+        new UpdateNodeCommand(nodeId, { content: node.content }, { content }),
+      );
+      refreshGraph();
+    },
+    [refreshGraph],
+  );
+
+  const handleDeleteNode = useCallback(
+    async (nodeId: string) => {
+      const s = servicesRef.current;
+      if (!s) return;
+      const graphId = s.navigationService.getCurrentGraphId();
+      if (!graphId) return;
+
+      await s.commandHistoryService.execute(new DeleteNodeCommand(graphId, nodeId));
+      console.log(
+        s.graphService.getGraph(graphId)?.nodeIds
+      );
+      refreshGraph();
+    },
+    [refreshGraph],
+  );
+
+  const handleResizeNode = useCallback(
+    async (nodeId: string, width: number, height: number) => {
+      const s = servicesRef.current;
+      if (!s) return;
+      const graphId = s.navigationService.getCurrentGraphId();
+      if (!graphId) return;
+      const view = s.graphService.getGraph(graphId)?.views.nodeViews[nodeId];
+      if (!view) return;
+
+      await s.commandHistoryService.execute(
+        new ResizeNodeCommand(
+          graphId,
+          nodeId,
+          { width: view.width, height: view.height },
+          { width, height },
+        ),
+      );
+      refreshGraph();
+    },
+    [refreshGraph],
+  );
+
+  const handleOpenNodeGraph = useCallback(
+    async (nodeId: string) => {
+      const s = servicesRef.current;
+      if (!s) return;
+      const node = s.nodeService.getNode(nodeId);
+      if (!node) return;
+
+      let childGraphId = node.childGraphId;
+      if (!childGraphId || !s.graphService.getGraph(childGraphId)) {
+        await s.commandHistoryService.execute(new CreateGraphCommand(node.label, nodeId));
+        childGraphId = s.nodeService.getNode(nodeId)?.childGraphId;
+      }
+
+      if (!childGraphId) return;
+      s.navigationService.navigateToGraph(childGraphId, nodeId);
+    },
+    [],
+  );
+
+  const handleGoHome = useCallback(() => {
+    setView("welcome");
+  }, []);
+
+  const handleCreateNode = useCallback(async () => {
     const s = servicesRef.current;
     if (!s) return;
     const graphId = s.navigationService.getCurrentGraphId();
     if (!graphId) return;
     const cmd = new CreateNodeCommand(graphId, "New Concept");
-    s.commandHistoryService.execute(cmd);
+    await s.commandHistoryService.execute(cmd);
     refreshGraph();
   }, [refreshGraph]);
 
@@ -260,14 +430,17 @@ export default function App() {
       if (!s) return;
       const dialog = uiStore.createEdgeDialog;
       if (!dialog.sourceId || !dialog.targetId) return;
+      console.log("[handleCreateEdge] dialog state:", { sourceId: dialog.sourceId, targetId: dialog.targetId, sourceHandle: dialog.sourceHandle, targetHandle: dialog.targetHandle });
       const cmd = new CreateEdgeCommand(
         s.navigationService.getCurrentGraphId() ?? "",
         dialog.sourceId,
         dialog.targetId,
         relationshipId as any,
         customLabel,
+        dialog.sourceHandle ?? undefined,
+        dialog.targetHandle ?? undefined,
       );
-      await (s.commandHistoryService.execute as any)(cmd);
+      await s.commandHistoryService.execute(cmd);
       refreshGraph();
       uiStore.closeCreateEdgeDialog();
     },
@@ -275,7 +448,7 @@ export default function App() {
   );
 
   const s = servicesRef.current;
-  const recents = s?.workspaceService.getRecents() ?? [];
+  const recents = servicesReady && s ? s.workspaceService.getRecents() : [];
 
   if (view === "welcome") {
     return (
@@ -304,7 +477,7 @@ export default function App() {
 
   if (!s || !currentGraph) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-[#13131a] text-white/50">
+      <div className="w-full h-full flex items-center justify-center text-white/50" style={{ background: "var(--app-bg)" }}>
         Loading...
       </div>
     );
@@ -330,6 +503,10 @@ export default function App() {
         onRedo={handleRedo}
         onNavigateBreadcrumb={handleNavigateBreadcrumb}
         onOpenCommandPalette={() => uiStore.openCommandPalette()}
+        onAddNode={handleCreateNode}
+        onGoHome={handleGoHome}
+        currentTool={uiStore.currentTool}
+        onToolChange={(tool: CanvasTool) => uiStore.setCurrentTool(tool)}
         sidebar={
           uiStore.relationshipInspectorOpen && uiStore.selectedEdgeId ? (
             <RelationshipInspector
@@ -339,6 +516,7 @@ export default function App() {
               nodeService={s.nodeService}
               commandHistoryService={s.commandHistoryService}
               onClose={() => uiStore.closeRelationshipInspector()}
+              onGraphChanged={refreshGraph}
             />
           ) : undefined
         }
@@ -347,8 +525,12 @@ export default function App() {
           graph={currentGraph}
           converterService={s.converterService}
           commandHistoryService={s.commandHistoryService}
-          graphService={s.graphService}
-          navigationService={s.navigationService}
+          onRenameNode={handleRenameNode}
+          onAddNodeContent={handleAddNodeContent}
+          onUpdateNodeContent={handleUpdateNodeContent}
+          onResizeNode={handleResizeNode}
+          onOpenNodeGraph={handleOpenNodeGraph}
+          onDeleteNode={handleDeleteNode}
         />
         <ValidationOverlay
           issues={issues}
