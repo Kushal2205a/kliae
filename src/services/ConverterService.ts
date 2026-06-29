@@ -7,22 +7,18 @@ interface ReactFlowNode {
   id: string;
   type: string;
   position: { x: number; y: number };
-  data: {
-    label: string;
-    nodeId: string;
-    color?: string;
-    childGraphId?: string;
-    width?: number;
-    height?: number;
-    tags: string[];
-  };
+  data: Record<string, unknown>;
+  style?: Record<string, unknown>;
   selected?: boolean;
+  draggable?: boolean;
 }
 
 interface ReactFlowEdge {
   id: string;
   source: string;
   target: string;
+  sourceHandle?: string;
+  targetHandle?: string;
   type: string;
   data?: {
     edgeId: string;
@@ -57,8 +53,13 @@ export class ConverterService {
         id: node.id,
         type: node.type,
         position: { x: view.position.x, y: view.position.y },
+        style: {
+          width: view.width,
+          height: view.height,
+        },
         data: {
           label: node.label,
+          content: node.content,
           nodeId: node.id,
           color: view.color,
           childGraphId: node.childGraphId,
@@ -74,18 +75,21 @@ export class ConverterService {
       if (!edge) continue;
 
       const displayLabel = resolveRelationshipLabel(edge.relationship);
+      const relationshipColor = getRelationshipColor(edge.relationship);
 
       edges.push({
         id: edge.id,
         source: edge.sourceId,
         target: edge.targetId,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
         type: "custom-edge",
         data: {
           edgeId: edge.id,
           relationshipType: edge.relationship.id,
           displayLabel,
           description: edge.description,
-          color: getRelationshipColor(edge.relationship),
+          color: relationshipColor,
         },
         label: displayLabel,
       });
