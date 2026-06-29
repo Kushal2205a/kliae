@@ -11,8 +11,8 @@ export class CommandHistoryService {
     this.ctx = ctx;
   }
 
-  execute(command: Command): void {
-    command.execute(this.ctx);
+  async execute(command: Command): Promise<void> {
+    await command.execute(this.ctx);
     this.undoStack.push(command);
     if (this.undoStack.length > MAX_HISTORY) {
       this.undoStack.shift();
@@ -20,18 +20,18 @@ export class CommandHistoryService {
     this.redoStack = [];
   }
 
-  undo(): Command | undefined {
+  async undo(): Promise<Command | undefined> {
     const command = this.undoStack.pop();
     if (!command) return undefined;
-    command.undo(this.ctx);
+    await command.undo(this.ctx);
     this.redoStack.push(command);
     return command;
   }
 
-  redo(): Command | undefined {
+  async redo(): Promise<Command | undefined> {
     const command = this.redoStack.pop();
     if (!command) return undefined;
-    command.execute(this.ctx);
+    await command.execute(this.ctx);
     this.undoStack.push(command);
     return command;
   }
