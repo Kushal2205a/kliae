@@ -19,6 +19,6 @@ export interface Command {
   readonly label: string;
   readonly description?: string;
   readonly shortcut?: string;
-  execute(ctx: CommandContext): void;
-  undo(ctx: CommandContext): void;
+  execute(ctx: CommandContext): void | Promise<void>;
+  undo(ctx: CommandContext): void | Promise<void>;
 }
