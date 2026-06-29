@@ -34,7 +34,7 @@ export class EdgeService {
 
   async create(
     graphId: string,
-    data: { sourceId: string; targetId: string; relationshipId: RelationshipTypeId; customLabel?: string; description?: string },
+    data: { sourceId: string; targetId: string; sourceHandle?: string; targetHandle?: string; relationshipId: RelationshipTypeId; customLabel?: string; description?: string },
   ): Promise<{ edge: Edge; view: EdgeView }> {
     const now = new Date().toISOString();
     const edgeId = generateId();
@@ -43,6 +43,8 @@ export class EdgeService {
       id: edgeId,
       sourceId: data.sourceId,
       targetId: data.targetId,
+      sourceHandle: data.sourceHandle,
+      targetHandle: data.targetHandle,
       relationship: {
         id: data.relationshipId,
         customLabel: data.customLabel,
@@ -58,6 +60,7 @@ export class EdgeService {
     };
 
     this.edges.set(edgeId, edge);
+    console.log("[EdgeService.create] stored edge:", { edgeId, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle });
     if (!this.views.has(graphId)) {
       this.views.set(graphId, new Map());
     }
