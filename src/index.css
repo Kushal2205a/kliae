@@ -88,3 +88,7 @@ html, body, #root {
 .react-flow__node:hover {
   filter: brightness(1.04);
 }
+
+.react-flow__attribution {
+  display: none !important;
+}

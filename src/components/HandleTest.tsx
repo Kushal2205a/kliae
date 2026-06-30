@@ -111,6 +111,11 @@ export default function HandleTest() {
     setEdges([] as any);
   }, [setEdges]);
 
+  const proOptions = {
+  hideAttribution: true,
+};
+
+
   return (
     <div style={{ width: "100%", height: "100vh", display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "8px 16px", background: "#181825", display: "flex", gap: 8, alignItems: "center", borderBottom: "1px solid #ffffff15" }}>
@@ -127,6 +132,7 @@ export default function HandleTest() {
       </div>
       <div style={{ flex: 1, position: "relative" }}>
         <ReactFlowProvider>
+          
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -137,7 +143,7 @@ export default function HandleTest() {
             fitView
             minZoom={0.1}
             maxZoom={4}
-            proOptions={{ hideAttribution: true }}
+            proOptions={proOptions}
           >
             <Background color="#ffffff10" gap={20} />
             <Controls className="!bg-[#1e1e2e] !border-white/10 !text-white" />
