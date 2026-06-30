@@ -121,19 +121,53 @@ function GraphCanvasInner({
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
+  // --- Zip state: stores each bundle's current zip-point ratio (0–1) ---
+  // Keyed by `${sourceNodeId}:${relationshipType}`.
+  // Defaults to FORK_RATIO (0.30) when absent.
+  const [zipTMap, setZipTMap] = useState<Map<string, number>>(new Map());
+
+  // Stable callback passed into every bundle-leader edge so CustomEdge can
+  // update the zip position without knowing about GraphCanvas internals.
+  const onZipDrag = useCallback((bundleKey: string, newZipT: number) => {
+    setZipTMap((prev) => {
+      const next = new Map(prev);
+      next.set(bundleKey, newZipT);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges } = converterService.toReactFlow(graph);
     setNodes(newNodes);
     setEdges(newEdges);
   }, [graph, converterService, setNodes, setEdges]);
 
-  // Derived edges with bundle origins computed from live node positions
+  // Derived edges with bundle zip-points computed from live node positions.
+  //
+  // Two-pass design:
+  //   Pass 1 — iterate leader edges, compute the zip point (position + geometry)
+  //            for each bundle and store in bundleDataMap.
+  //   Pass 2 — map over ALL edges; any edge whose (source, relationshipType)
+  //            belongs to a bundle gets the zip data injected so CustomEdge can
+  //            render the trunk-then-diverge path and handle label dragging.
   const edgesWithOrigins = useMemo(() => {
-    return edges.map((edge: any) => {
-      if (!edge.data?.isBundleLeader || !edge.data?.bundleTargetIds?.length) return edge;
+    const FORK_RATIO    = 0.30;
+    const MIN_FORWARD_PX = 28;
+
+    type BundleData = {
+      zipX: number; zipY: number;
+      bundleDx: number; bundleDy: number;
+      bundleHx: number; bundleHy: number;
+      bundleAxisLength: number;
+    };
+    const bundleDataMap = new Map<string, BundleData>();
+
+    // --- Pass 1: build bundle geometry for every leader edge ---
+    for (const edge of edges as any[]) {
+      if (!edge.data?.isBundleLeader || !edge.data?.bundleTargetIds?.length) continue;
 
       const sourceNode = nodes.find((n: any) => n.id === edge.source);
-      if (!sourceNode) return edge;
+      if (!sourceNode) continue;
 
       const { width: sw, height: sh } = getNodeDims(sourceNode);
       const sx = sourceNode.position.x + sw / 2;
@@ -154,7 +188,7 @@ function GraphCanvasInner({
         count++;
       }
 
-      if (count === 0) return edge;
+      if (count === 0) continue;
 
       const dirLen = Math.sqrt(dx * dx + dy * dy);
       if (dirLen > 0) { dx /= dirLen; dy /= dirLen; }
@@ -183,32 +217,60 @@ function GraphCanvasInner({
       const avgTx = targetCenters.reduce((s, c) => s + c.x, 0) / count;
       const avgTy = targetCenters.reduce((s, c) => s + c.y, 0) / count;
 
-      // Project the source-border→average-target vector onto the bundle direction.
-      // This is the along-axis distance the edges travel before reaching their centroid.
-      // Using the centroid (not minDist) means the forward position scales with the
-      // full bundle span, so the label tracks the visual fork regardless of whether
-      // the bundle is tall, diagonal, or has unevenly spaced targets.
+      // Along-axis distance from source border to average target centroid.
+      // This is the denominator for the zipT ratio and the drag projection.
       const borderToAvgAlongAxis = (avgTx - hx) * dx + (avgTy - hy) * dy;
 
-      // Place the label ~30% of the way along the axis from source border to average
-      // target. For React Flow's bezier curves, this is where the paths are still
-      // traveling close together before diverging to their respective targets.
-      const FORK_RATIO = 0.30;
-      const MIN_FORWARD_PX = 28;
-      const forwardDist = Math.max(borderToAvgAlongAxis * FORK_RATIO, MIN_FORWARD_PX);
+      // Resolve the current zip ratio for this bundle.
+      // Users can drag the label to change it; FORK_RATIO is the default.
+      const bundleKey = `${edge.source}:${edge.data.relationshipType}`;
+      const zipT      = zipTMap.get(bundleKey) ?? FORK_RATIO;
+      const forwardDist = Math.max(borderToAvgAlongAxis * zipT, MIN_FORWARD_PX);
 
       const perpMid = isFinite(minPerp) ? (minPerp + maxPerp) / 2 : 0;
+
+      bundleDataMap.set(bundleKey, {
+        zipX: hx + dx * forwardDist + (-dy) * perpMid,
+        zipY: hy + dy * forwardDist + (dx)  * perpMid,
+        bundleDx:          dx,
+        bundleDy:          dy,
+        bundleHx:          hx,
+        bundleHy:          hy,
+        // Guard against degenerate (zero-length) bundles.
+        bundleAxisLength:  Math.max(borderToAvgAlongAxis, 1),
+      });
+    }
+
+    // --- Pass 2: annotate every edge that belongs to a bundle ---
+    return (edges as any[]).map((edge: any) => {
+      const bundleKey  = `${edge.source}:${edge.data?.relationshipType}`;
+      const bundleData = bundleDataMap.get(bundleKey);
+
+      // Singleton edges (no bundle) are returned unchanged — no behaviour diff.
+      if (!bundleData) return edge;
 
       return {
         ...edge,
         data: {
           ...edge.data,
-          bundleOriginX: hx + dx * forwardDist + (-dy) * perpMid,
-          bundleOriginY: hy + dy * forwardDist + (dx) * perpMid,
+          // Keep bundleOriginX/Y for backward compat with any other consumers.
+          bundleOriginX:    bundleData.zipX,
+          bundleOriginY:    bundleData.zipY,
+          // Zip-specific fields consumed by CustomEdge.
+          zipX:             bundleData.zipX,
+          zipY:             bundleData.zipY,
+          bundleDx:         bundleData.bundleDx,
+          bundleDy:         bundleData.bundleDy,
+          bundleHx:         bundleData.bundleHx,
+          bundleHy:         bundleData.bundleHy,
+          bundleAxisLength: bundleData.bundleAxisLength,
+          bundleKey,
+          isInBundle:       true,
+          onZipDrag,
         },
       };
     });
-  }, [nodes, edges]);
+  }, [nodes, edges, zipTMap, onZipDrag]);
 
   // --- Canvas drag overrides for real-time rendering ---
   const dragOverridesRef = useRef<Map<string, DragOverride>>(new Map());
