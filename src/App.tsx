@@ -7,7 +7,7 @@ import { EdgeService } from "./services/EdgeService";
 import { GraphService } from "./services/GraphService";
 import { NavigationService } from "./services/NavigationService";
 import { ConverterService } from "./services/ConverterService";
-import LexicalEditor from "./components/Editor/LexicalEditor";
+
 import { CommandHistoryService } from "./services/CommandHistoryService";
 import { AutosaveService } from "./services/AutosaveService";
 import { WorkspaceValidator } from "./services/WorkspaceValidator";

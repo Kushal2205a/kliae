@@ -7,7 +7,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import LoadEditorStatePlugin from "./LoadEditorStatePlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { $getRoot } from "lexical";
+
 const theme = {
     paragraph: "leading-6",
     text: {
