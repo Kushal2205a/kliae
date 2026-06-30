@@ -137,6 +137,7 @@ export default function HandleTest() {
             fitView
             minZoom={0.1}
             maxZoom={4}
+            proOptions={{ hideAttribution: true }}
           >
             <Background color="#ffffff10" gap={20} />
             <Controls className="!bg-[#1e1e2e] !border-white/10 !text-white" />

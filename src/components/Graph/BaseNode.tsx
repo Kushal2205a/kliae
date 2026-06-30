@@ -52,6 +52,44 @@ function BaseNode({ id, data, selected }: NodeProps) {
   const imageOnlyContent = hasContent && imageBlocks.length > 0 && !richTextBlock;
   const shouldFillImageArea = imageBlocks.length > 0 && !!nodeHeight;
 
+  // The node must never be resizable narrower than its own toolbar needs
+  // when in edit mode, or buttons get clipped at the edge with no way to
+  // reach them (the overflow-hidden wrapper hides the scrollable overflow).
+  const dynamicMinWidth = useMemo(() => {
+    const BASE_MIN_WIDTH = 180;
+    const TOOLBAR_MIN_WIDTH = 300; // enough for all 7 buttons + 3 dividers + padding
+    return hasContent && contentEditing
+      ? Math.max(BASE_MIN_WIDTH, TOOLBAR_MIN_WIDTH)
+      : BASE_MIN_WIDTH;
+  }, [hasContent, contentEditing]);
+
+  // The node must never be resizable below the space its own header/toolbar
+  // need, or content visually escapes the rounded border (and sits under
+  // the resize handles). Account for: title row, the divider + a sliver of
+  // content (~72px base), plus the toolbar row when in edit mode (~40px).
+  const dynamicMinHeight = useMemo(() => {
+    const BASE_MIN_HEIGHT = 72;
+    const CONTENT_DIVIDER_HEIGHT = 24; // divider + minimal text line
+    const TOOLBAR_HEIGHT = 40; // toolbar row + its bottom margin
+
+    let min = BASE_MIN_HEIGHT;
+    if (hasContent) {
+      min += CONTENT_DIVIDER_HEIGHT;
+      if (contentEditing) {
+        min += TOOLBAR_HEIGHT;
+      }
+    }
+    return min;
+  }, [hasContent, contentEditing]);
+
+  useEffect(() => {
+    if (nodeHeight && nodeHeight < dynamicMinHeight) {
+      onResizeNode(id, Math.max(nodeWidth ?? 180, dynamicMinWidth), dynamicMinHeight);
+    } else if (nodeWidth && nodeWidth < dynamicMinWidth) {
+      onResizeNode(id, dynamicMinWidth, nodeHeight ?? dynamicMinHeight);
+    }
+  }, [dynamicMinHeight, dynamicMinWidth, nodeHeight, nodeWidth, id, onResizeNode]);
+
   // ── title editing ──────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -186,7 +224,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
       <div
         className={`
           relative flex h-full w-full flex-col px-4 py-3 rounded-lg border-2 shadow-lg
-          min-w-[180px] ${nodeWidth ? "" : imageOnlyContent ? "max-w-none" : "max-w-[320px]"}
+          ${nodeWidth ? "" : imageOnlyContent ? "max-w-none" : "max-w-[320px]"}
           transition-all duration-150
           ${selected ? "ring-2 ring-white/60 border-white/80" : "border-white/10"}
         `}
@@ -194,6 +232,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
           borderColor: selected ? undefined : `${color}40`,
           width: nodeWidth ? "100%" : undefined,
           height: nodeHeight ? "100%" : undefined,
+          minWidth: dynamicMinWidth,
           background: "var(--app-surface)",
           color: "var(--app-text)",
         }}
@@ -205,8 +244,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
       >
         <NodeResizer
           isVisible={selected}
-          minWidth={180}
-          minHeight={72}
+          minWidth={dynamicMinWidth}
+          minHeight={dynamicMinHeight}
           lineClassName="!border-white/50"
           handleClassName="!h-2 !w-2 !rounded-sm !border !border-black/40 !bg-white/80"
           onResizeEnd={(_event, params) => {
@@ -222,6 +261,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
         <Handle type="source" position={Position.Left} id="left-source" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
         <Handle type="target" position={Position.Right} id="right-target" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
         <Handle type="source" position={Position.Right} id="right-source" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
+
+        <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
 
         {/* Title */}
         <div className="flex flex-shrink-0 items-center justify-center gap-2">
@@ -324,6 +365,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
             )}
           </>
         )}
+        </div>
       </div>
 
       {previewImage && createPortal(

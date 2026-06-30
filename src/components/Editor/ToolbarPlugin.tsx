@@ -98,19 +98,34 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
     }, [editor, $updateToolbar]);
 
     const btn =
-        "p-1 rounded text-white/45 hover:text-white/80 hover:bg-white/10 transition-colors";
-    const active = "bg-white/15 !text-white";
+        "flex-shrink-0 p-1 rounded opacity-40 hover:opacity-90 hover:bg-current/10 transition-colors";
+    const active = "!opacity-100 bg-current/15";
 
     return (
-        /*
+        <>
+        {/*
          * KEY: onMouseDown on the container calls e.preventDefault() so the
          * browser never moves focus away from the contenteditable, keeping
          * the Lexical selection alive. Each button then uses onClick (which
          * fires after mouseup without needing focus) to dispatch the command.
          * This is exactly how the official Lexical Playground does it.
-         */
+         *
+         * The toolbar stays a single row and scrolls horizontally (scrollbar
+         * hidden) instead of wrapping — wrapping would change the toolbar's
+         * height and overflow past nodes that have a fixed/resized height.
+         */}
+        <style>{`
+            .toolbar-scroll {
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            .toolbar-scroll::-webkit-scrollbar {
+                display: none;
+            }
+        `}</style>
         <div
-            className="mb-2 flex items-center gap-1 nodrag nowheel"
+            className="mb-2 flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden nodrag nowheel toolbar-scroll"
+            style={{ color: "var(--app-text)" }}
             onMouseDown={(e) => e.preventDefault()}
         >
             <button
@@ -165,7 +180,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                 <Strikethrough className="w-3.5 h-3.5" />
             </button>
 
-            <div className="w-px h-4 bg-white/15 mx-0.5" />
+            <div className="w-px h-4 bg-current/15 mx-0.5 flex-shrink-0 self-center" />
 
             <button
                 className={`${btn} ${isBulletList ? active : ""}`}
@@ -193,7 +208,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                 <ListOrdered className="w-3.5 h-3.5" />
             </button>
 
-            <div className="w-px h-4 bg-white/15 mx-0.5" />
+            <div className="w-px h-4 bg-current/15 mx-0.5 flex-shrink-0 self-center" />
 
             <button
                 type="button"
@@ -204,7 +219,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                 <ImagePlus className="w-3.5 h-3.5" />
             </button>
 
-            <div className="w-px h-4 bg-white/15 mx-0.5" />
+            <div className="w-px h-4 bg-current/15 mx-0.5 flex-shrink-0 self-center" />
 
             <button
                 className={`${btn} ${isCode ? active : ""}`}
@@ -224,5 +239,6 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                 <Code2 className="w-3.5 h-3.5" />
             </button>
         </div>
+        </>
     );
 }
