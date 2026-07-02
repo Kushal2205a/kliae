@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Kliae",
-  "version": "0.1.0",
+  "version": "0.1.0-beta.4",
   "identifier": "app.kliae.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -35,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2OEJGMDA3N0VGQ0Y5QUQKUldTdCtmeCtCL0NMMW0xRGNWMXRpamhaQ09ZSE1RaHQycis1d21KRXhZaFkzc0JBSGxFSEhUSm0K",
+      "endpoints": [
+        "https://github.com/Kushal2205a/kliae/releases/latest/download/latest.json"
+      ]
+    }
   }
 }
