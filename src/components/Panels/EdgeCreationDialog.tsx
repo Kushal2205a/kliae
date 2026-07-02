@@ -1,24 +1,42 @@
 import { useState } from "react";
-import { BUILTIN_RELATIONSHIPS } from "../../constants/relationships";
+import { getEffectiveBuiltinRelationships } from "../../constants/relationships";
+import type { RelationshipDefinition } from "../../types";
 
 interface EdgeCreationDialogProps {
   sourceLabel: string;
   targetLabel: string;
+  /** Project's saved custom relationships (WorkspaceService.getCustomRelationships()). */
+  customRelationships: RelationshipDefinition[];
   onConfirm: (relationshipId: string, customLabel?: string) => void;
   onCancel: () => void;
 }
 
+type Selection =
+  | { kind: "builtin"; id: string }
+  | { kind: "existing-custom"; label: string }
+  | { kind: "new-custom" };
+
 export default function EdgeCreationDialog({
   sourceLabel,
   targetLabel,
+  customRelationships,
   onConfirm,
   onCancel,
 }: EdgeCreationDialogProps) {
-  const [selectedId, setSelectedId] = useState<string>("uses");
+  const [selection, setSelection] = useState<Selection>({ kind: "builtin", id: "uses" });
   const [customLabel, setCustomLabel] = useState("");
+  // Read fresh each render so app-wide default color overrides (edited from
+  // the welcome screen) are reflected without needing a page reload.
+  const nonCustomBuiltins = getEffectiveBuiltinRelationships().filter((r) => r.id !== "custom");
 
   const handleConfirm = () => {
-    onConfirm(selectedId, selectedId === "custom" ? customLabel : undefined);
+    if (selection.kind === "builtin") {
+      onConfirm(selection.id);
+    } else if (selection.kind === "existing-custom") {
+      onConfirm("custom", selection.label);
+    } else {
+      onConfirm("custom", customLabel);
+    }
   };
 
   return (
@@ -35,14 +53,14 @@ export default function EdgeCreationDialog({
         </div>
 
         <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
-          {BUILTIN_RELATIONSHIPS.map((rel) => (
+          {nonCustomBuiltins.map((rel) => (
             <button
               key={rel.id}
-              onClick={() => setSelectedId(rel.id)}
+              onClick={() => setSelection({ kind: "builtin", id: rel.id })}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
               style={{
-                background: selectedId === rel.id ? "var(--app-surface-2)" : undefined,
-                color: selectedId === rel.id ? "var(--app-text)" : "var(--app-muted)",
+                background: selection.kind === "builtin" && selection.id === rel.id ? "var(--app-surface-2)" : undefined,
+                color: selection.kind === "builtin" && selection.id === rel.id ? "var(--app-text)" : "var(--app-muted)",
               }}
             >
               <div
@@ -52,9 +70,46 @@ export default function EdgeCreationDialog({
               <span>{rel.displayName}</span>
             </button>
           ))}
+
+          {customRelationships.length > 0 && (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide" style={{ color: "var(--app-muted)" }}>
+                Custom
+              </div>
+              {customRelationships.map((rel) => (
+                <button
+                  key={rel.displayName}
+                  onClick={() => setSelection({ kind: "existing-custom", label: rel.displayName })}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
+                  style={{
+                    background: selection.kind === "existing-custom" && selection.label === rel.displayName ? "var(--app-surface-2)" : undefined,
+                    color: selection.kind === "existing-custom" && selection.label === rel.displayName ? "var(--app-text)" : "var(--app-muted)",
+                  }}
+                >
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: rel.color ?? "#6b7280" }}
+                  />
+                  <span>{rel.displayName}</span>
+                </button>
+              ))}
+            </>
+          )}
+
+          <button
+            onClick={() => setSelection({ kind: "new-custom" })}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
+            style={{
+              background: selection.kind === "new-custom" ? "var(--app-surface-2)" : undefined,
+              color: selection.kind === "new-custom" ? "var(--app-text)" : "var(--app-muted)",
+            }}
+          >
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#6b7280" }} />
+            <span>Custom...</span>
+          </button>
         </div>
 
-        {selectedId === "custom" && (
+        {selection.kind === "new-custom" && (
           <div className="mb-4">
             <label className="block text-xs mb-1" style={{ color: "var(--app-muted)" }}>Custom Label</label>
             <input
