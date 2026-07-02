@@ -28,7 +28,7 @@ import WelcomeScreen from "./components/Welcome/WelcomeScreen";
 import CreateWorkspaceDialog from "./components/Welcome/CreateWorkspaceDialog";
 import OpenWorkspaceDialog from "./components/Welcome/OpenWorkspaceDialog";
 import AppShell from "./components/Layout/AppShell";
-import GraphCanvas from "./components/Graph/GraphCanvas";
+import GraphCanvas, { type GraphCanvasHandle } from "./components/Graph/GraphCanvas";
 import RelationshipInspector from "./components/Panels/RelationshipInspector";
 import EdgeCreationDialog from "./components/Panels/EdgeCreationDialog";
 import CommandPalette from "./components/CommandPalette/CommandPalette";
@@ -65,6 +65,7 @@ export default function App() {
   } | null>(null);
 
   const relationshipIndexRef = useRef<RelationshipIndexService | null>(null);
+  const graphCanvasRef = useRef<GraphCanvasHandle>(null);
 
   const navStore = useNavigationStore();
   const graphStore = useGraphStore();
@@ -425,7 +426,8 @@ export default function App() {
     if (!s) return;
     const graphId = s.navigationService.getCurrentGraphId();
     if (!graphId) return;
-    const cmd = new CreateNodeCommand(graphId, "New Concept");
+    const position = graphCanvasRef.current?.getViewportCenter();
+    const cmd = new CreateNodeCommand(graphId, "New Concept", position);
     await s.commandHistoryService.execute(cmd);
     refreshGraph();
   }, [refreshGraph]);
@@ -552,6 +554,7 @@ export default function App() {
       >
         <RelationshipIndexProvider value={relationshipIndexRef.current!}>
           <GraphCanvas
+            ref={graphCanvasRef}
             graph={currentGraph}
             converterService={s.converterService}
             commandHistoryService={s.commandHistoryService}
