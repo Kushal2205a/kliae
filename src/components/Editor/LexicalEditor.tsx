@@ -107,28 +107,29 @@ export default function LexicalEditor({
         <LexicalComposer initialConfig={initialConfig}>
             <div className="relative flex h-full flex-col nodrag nowheel">
                 <ToolbarPlugin onAddImage={onAddImage} />
-                <RichTextPlugin
-                    contentEditable={
-                        <ContentEditable
-                            className="
-                                nodrag
-                                nowheel
-                                flex-1
-                                min-h-0
-                                px-1
-                                py-1
-                                outline-none
-                                text-xs
-                                leading-5
-                                cursor-text
-                                overflow-y-auto
-                            "
-                            style={{ color: "var(--app-text)" }}
-                        />
-                    }
-                    placeholder={<Placeholder />}
-                    ErrorBoundary={LexicalErrorBoundary}
-                />
+                <div className="relative flex-1 min-h-0">
+                    <RichTextPlugin
+                        contentEditable={
+                            <ContentEditable
+                                className="
+                                    nodrag
+                                    nowheel
+                                    h-full
+                                    px-1
+                                    py-1
+                                    outline-none
+                                    text-xs
+                                    leading-5
+                                    cursor-text
+                                    overflow-y-auto
+                                "
+                                style={{ color: "var(--app-text)" }}
+                            />
+                        }
+                        placeholder={<Placeholder />}
+                        ErrorBoundary={LexicalErrorBoundary}
+                    />
+                </div>
                 <HistoryPlugin />
                 <ListPlugin />
                 <CodeHighlightPlugin />
