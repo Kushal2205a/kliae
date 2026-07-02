@@ -4,9 +4,10 @@ import type { Edge } from "../../types";
 import type { EdgeService } from "../../services/EdgeService";
 import type { NodeService } from "../../services/NodeService";
 import type { CommandHistoryService } from "../../services/CommandHistoryService";
+import type { WorkspaceService } from "../../services/WorkspaceService";
 import { UpdateEdgeCommand } from "../../commands/UpdateEdgeCommand";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
-import { BUILTIN_RELATIONSHIPS, resolveRelationshipLabel, getRelationshipDefinition } from "../../constants/relationships";
+import { resolveRelationshipLabel, getEffectiveBuiltinRelationships, getEffectiveRelationshipDefinition } from "../../constants/relationships";
 
 interface RelationshipInspectorProps {
   edgeId: string;
@@ -14,6 +15,7 @@ interface RelationshipInspectorProps {
   edgeService: EdgeService;
   nodeService: NodeService;
   commandHistoryService: CommandHistoryService;
+  workspaceService: WorkspaceService;
   onClose: () => void;
   onGraphChanged?: () => void;
 }
@@ -24,12 +26,17 @@ export default function RelationshipInspector({
   edgeService,
   nodeService,
   commandHistoryService,
+  workspaceService,
   onClose,
   onGraphChanged,
 }: RelationshipInspectorProps) {
   const edge = edgeService.getEdge(edgeId);
   const sourceNode = edge ? nodeService.getNode(edge.sourceId) : undefined;
   const targetNode = edge ? nodeService.getNode(edge.targetId) : undefined;
+  const customRelationships = workspaceService.getCustomRelationships();
+  // Read fresh each render so app-wide default color overrides (edited from
+  // the welcome screen) show up without needing a page reload.
+  const nonCustomBuiltins = getEffectiveBuiltinRelationships().filter((rel) => rel.id !== "custom");
 
   const [relationshipId, setRelationshipId] = useState<string>(edge?.relationship.id ?? "uses");
   const [customLabel, setCustomLabel] = useState(edge?.relationship.customLabel ?? "");
@@ -45,7 +52,13 @@ export default function RelationshipInspector({
     }
   }, [edge]);
 
-  const currentRel = getRelationshipDefinition(relationshipId);
+  // For a custom edge, prefer the saved project definition (correct color)
+  // over the generic gray "custom" fallback.
+  const currentRel =
+    relationshipId === "custom" && customLabel
+      ? customRelationships.find((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
+        ?? getEffectiveRelationshipDefinition(relationshipId)
+      : getEffectiveRelationshipDefinition(relationshipId);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -85,6 +98,16 @@ export default function RelationshipInspector({
       commitSave(newId, customLabel, description);
     },
     [customLabel, description, commitSave],
+  );
+
+  const handleSelectCustom = useCallback(
+    (label: string) => {
+      setRelationshipId("custom");
+      setCustomLabel(label);
+      setDropdownOpen(false);
+      commitSave("custom", label, description);
+    },
+    [description, commitSave],
   );
 
   const handleDelete = useCallback(() => {
@@ -134,7 +157,9 @@ export default function RelationshipInspector({
             className="w-2 h-2 rounded-full shrink-0"
             style={{ backgroundColor: currentRel?.color ?? "#6b7280" }}
           />
-          <span className="flex-1 text-left">{currentRel?.displayName ?? relationshipId}</span>
+          <span className="flex-1 text-left">
+            {relationshipId === "custom" && customLabel ? customLabel : currentRel?.displayName ?? relationshipId}
+          </span>
           <ChevronDown
             className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
             style={{ color: "var(--app-muted)" }}
@@ -142,7 +167,7 @@ export default function RelationshipInspector({
         </button>
         {dropdownOpen && (
           <div className="absolute left-0 right-0 top-full mt-1 z-50 p-1 rounded-xl shadow-xl max-h-48 overflow-y-auto" style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)" }}>
-            {BUILTIN_RELATIONSHIPS.map((rel) => (
+            {nonCustomBuiltins.map((rel) => (
               <button
                 key={rel.id}
                 onClick={() => handleSelect(rel.id)}
@@ -162,6 +187,55 @@ export default function RelationshipInspector({
                 )}
               </button>
             ))}
+
+            {customRelationships.length > 0 && (
+              <>
+                <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide" style={{ color: "var(--app-muted)" }}>
+                  Custom
+                </div>
+                {customRelationships.map((rel) => {
+                  const isSelected =
+                    relationshipId === "custom" &&
+                    customLabel.toLowerCase() === rel.displayName.toLowerCase();
+                  return (
+                    <button
+                      key={rel.displayName}
+                      onClick={() => handleSelectCustom(rel.displayName)}
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
+                      style={{
+                        background: isSelected ? "var(--app-surface)" : undefined,
+                        color: isSelected ? "var(--app-text)" : "var(--app-muted)",
+                      }}
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: rel.color ?? "#6b7280" }}
+                      />
+                      <span className="flex-1">{rel.displayName}</span>
+                      {isSelected && (
+                        <span className="text-xs" style={{ color: "var(--app-muted)" }}>✓</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </>
+            )}
+
+            <button
+              onClick={() => handleSelect("custom")}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
+              style={{
+                background:
+                  relationshipId === "custom" &&
+                  !customRelationships.some((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
+                    ? "var(--app-surface)"
+                    : undefined,
+                color: "var(--app-muted)",
+              }}
+            >
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "#6b7280" }} />
+              <span className="flex-1">Custom...</span>
+            </button>
           </div>
         )}
       </div>
