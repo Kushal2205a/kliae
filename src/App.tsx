@@ -32,6 +32,7 @@ import GraphCanvas, { type GraphCanvasHandle } from "./components/Graph/GraphCan
 import UpdateNotifier from "./components/Update/UpdateNotifier";
 import RelationshipInspector from "./components/Panels/RelationshipInspector";
 import EdgeCreationDialog from "./components/Panels/EdgeCreationDialog";
+import ProjectSettingsDialog from "./components/Panels/ProjectSettingsDialog";
 import CommandPalette from "./components/CommandPalette/CommandPalette";
 import ValidationOverlay from "./components/Validation/ValidationOverlay";
 import { RelationshipIndexService } from "./services/RelationshipIndexService";
@@ -46,6 +47,7 @@ export default function App() {
   const [view, setView] = useState<"welcome" | "workspace">("welcome");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
+  const [showProjectSettings, setShowProjectSettings] = useState(false);
   const [workspaceName, setWorkspaceName] = useState("Knowledge Graph");
   const [currentGraph, setCurrentGraph] = useState<Graph | null>(null);
   const [servicesReady, setServicesReady] = useState(false);
@@ -82,7 +84,7 @@ export default function App() {
     const edgeService = new EdgeService(workspaceService, eventBus);
     const graphService = new GraphService(workspaceService, eventBus);
     const navigationService = new NavigationService(graphService, nodeService, eventBus);
-    const converterService = new ConverterService(nodeService, edgeService);
+    const converterService = new ConverterService(nodeService, edgeService, workspaceService);
     const validator = new WorkspaceValidator(nodeService, edgeService, graphService, workspaceService);
 
     const commandCtx: CommandContext = {
@@ -547,6 +549,7 @@ export default function App() {
         onGoHome={handleGoHome}
         currentTool={uiStore.currentTool}
         onToolChange={(tool: CanvasTool) => uiStore.setCurrentTool(tool)}
+        onOpenProjectSettings={() => setShowProjectSettings(true)}
         sidebar={
           uiStore.relationshipInspectorOpen && uiStore.selectedEdgeId ? (
             <RelationshipInspector
@@ -554,6 +557,7 @@ export default function App() {
               graphId={graphId}
               edgeService={s.edgeService}
               nodeService={s.nodeService}
+              workspaceService={s.workspaceService}
               commandHistoryService={s.commandHistoryService}
               onClose={() => uiStore.closeRelationshipInspector()}
               onGraphChanged={refreshGraph}
@@ -567,6 +571,7 @@ export default function App() {
             graph={currentGraph}
             converterService={s.converterService}
             commandHistoryService={s.commandHistoryService}
+            workspaceService={s.workspaceService}
             onRenameNode={handleRenameNode}
             onAddNodeContent={handleAddNodeContent}
             onUpdateNodeContent={handleUpdateNodeContent}
@@ -586,8 +591,17 @@ export default function App() {
         <EdgeCreationDialog
           sourceLabel={sourceLabel}
           targetLabel={targetLabel}
+          customRelationships={s.workspaceService.getCustomRelationships()}
           onConfirm={handleCreateEdge}
           onCancel={() => uiStore.closeCreateEdgeDialog()}
+        />
+      )}
+
+      {showProjectSettings && s && (
+        <ProjectSettingsDialog
+          workspaceService={s.workspaceService}
+          onClose={() => setShowProjectSettings(false)}
+          onColorsChanged={refreshGraph}
         />
       )}
 
@@ -597,11 +611,13 @@ export default function App() {
             { type: "create-node", label: "Create Concept Node", shortcut: "Ctrl+N" },
             { type: "undo", label: "Undo", shortcut: "Ctrl+Z" },
             { type: "redo", label: "Redo", shortcut: "Ctrl+Shift+Z" },
+            { type: "project-settings", label: "Project Settings: Custom Relationship Colors" },
           ]}
           onExecute={(cmd) => {
             if (cmd.type === "create-node") handleCreateNode();
             if (cmd.type === "undo") handleUndo();
             if (cmd.type === "redo") handleRedo();
+            if (cmd.type === "project-settings") setShowProjectSettings(true);
           }}
           onClose={() => uiStore.closeCommandPalette()}
         />
