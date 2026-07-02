@@ -1,6 +1,7 @@
 import type { Graph } from "../types";
 import type { NodeService } from "./NodeService";
 import type { EdgeService } from "./EdgeService";
+import type { WorkspaceService } from "./WorkspaceService";
 import { resolveRelationshipLabel, getRelationshipColor } from "../constants/relationships";
 
 interface ReactFlowNode {
@@ -41,10 +42,12 @@ interface ReactFlowEdge {
 export class ConverterService {
   private nodeService: NodeService;
   private edgeService: EdgeService;
+  private workspaceService: WorkspaceService;
 
-  constructor(nodeService: NodeService, edgeService: EdgeService) {
+  constructor(nodeService: NodeService, edgeService: EdgeService, workspaceService: WorkspaceService) {
     this.nodeService = nodeService;
     this.edgeService = edgeService;
+    this.workspaceService = workspaceService;
   }
 
   toReactFlow(graph: Graph): { nodes: ReactFlowNode[]; edges: ReactFlowEdge[] } {
@@ -77,12 +80,14 @@ export class ConverterService {
       });
     }
 
+    const customRelationships = this.workspaceService.getCustomRelationships();
+
     for (const edgeId of graph.edgeIds) {
       const edge = this.edgeService.getEdge(edgeId);
       if (!edge) continue;
 
       const displayLabel = resolveRelationshipLabel(edge.relationship);
-      const relationshipColor = getRelationshipColor(edge.relationship);
+      const relationshipColor = getRelationshipColor(edge.relationship, customRelationships);
 
       edges.push({
         id: edge.id,
