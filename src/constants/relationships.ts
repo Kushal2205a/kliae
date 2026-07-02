@@ -1,4 +1,5 @@
 import type { RelationshipDefinition, RelationshipTypeId } from "../types";
+import { getDefaultRelationshipColorOverrides } from "../services/appSettings";
 
 export const BUILTIN_RELATIONSHIPS: RelationshipDefinition[] = [
   { id: "uses",          displayName: "Uses",          inverse: "used_by",          color: "#3b82f6" },
@@ -16,6 +17,24 @@ export const BUILTIN_RELATIONSHIPS: RelationshipDefinition[] = [
   { id: "custom",        displayName: "Custom...",       inverse: null,               color: "#6b7280" },
 ];
 
+/**
+ * BUILTIN_RELATIONSHIPS with any app-wide user color overrides applied
+ * (see services/appSettings.ts). Use this instead of the raw
+ * BUILTIN_RELATIONSHIPS constant anywhere colors are displayed or looked
+ * up, so the settings screen's changes show up everywhere immediately.
+ */
+export function getEffectiveBuiltinRelationships(): RelationshipDefinition[] {
+  const overrides = getDefaultRelationshipColorOverrides();
+  return BUILTIN_RELATIONSHIPS.map((r) =>
+    overrides[r.id] ? { ...r, color: overrides[r.id] } : r,
+  );
+}
+
+/** Like getRelationshipDefinition, but reflects app-wide color overrides. */
+export function getEffectiveRelationshipDefinition(id: string): RelationshipDefinition | undefined {
+  return getEffectiveBuiltinRelationships().find((r) => r.id === id);
+}
+
 export function resolveRelationshipLabel(relationship: { id: string; customLabel?: string }): string {
   if (relationship.id === "custom" && relationship.customLabel) {
     return relationship.customLabel;
@@ -24,7 +43,25 @@ export function resolveRelationshipLabel(relationship: { id: string; customLabel
   return def?.displayName ?? relationship.id;
 }
 
-export function getRelationshipColor(relationship: { id: string }): string {
+/**
+ * `customRelationships` (the project's saved custom types — see
+ * WorkspaceService.getCustomRelationships()) is optional so existing call
+ * sites keep compiling unchanged. Pass it wherever available for correct
+ * per-label coloring; without it every custom edge falls back to the
+ * generic gray "custom" color regardless of its actual label.
+ */
+export function getRelationshipColor(
+  relationship: { id: string; customLabel?: string },
+  customRelationships: RelationshipDefinition[] = [],
+): string {
+  if (relationship.id === "custom" && relationship.customLabel) {
+    const custom = customRelationships.find(
+      (r) => r.displayName.toLowerCase() === relationship.customLabel!.toLowerCase(),
+    );
+    if (custom?.color) return custom.color;
+  }
+  const overrides = getDefaultRelationshipColorOverrides();
+  if (overrides[relationship.id]) return overrides[relationship.id];
   const def = BUILTIN_RELATIONSHIPS.find((r) => r.id === relationship.id);
   return def?.color ?? "#6b7280";
 }
@@ -44,6 +81,25 @@ export function getFilterKey(relationship: { id: string; customLabel?: string })
 
 export function getRelationshipDefinition(id: string): RelationshipDefinition | undefined {
   return BUILTIN_RELATIONSHIPS.find((r) => r.id === id);
+}
+
+/**
+ * Every custom relationship shares id "custom", so it can't be used as an
+ * SVG marker id on its own (all custom edges would collide on one marker).
+ * This produces a distinct, DOM-safe id per custom label, e.g.
+ * "custom-bug-report" for the label "Bug Report" — so each custom
+ * relationship can get its own colored arrowhead, matching its edge color.
+ */
+export function getRelationshipMarkerKey(relationship: { id: string; customLabel?: string }): string {
+  if (relationship.id === "custom" && relationship.customLabel) {
+    const slug = relationship.customLabel
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    return `custom-${slug || "unnamed"}`;
+  }
+  return relationship.id;
 }
 
 export const RELATIONSHIP_TYPE_IDS: RelationshipTypeId[] = BUILTIN_RELATIONSHIPS.map((r) => r.id);
