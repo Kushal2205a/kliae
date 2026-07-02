@@ -439,6 +439,9 @@ export default function App() {
       "ctrl+shift+z": handleRedo,
       "ctrl+n": handleCreateNode,
       "ctrl+shift+p": () => uiStore.openCommandPalette(),
+      "ctrl+c": () => graphCanvasRef.current?.copySelectedNodes(),
+      "ctrl+v": () => graphCanvasRef.current?.pasteClipboard(),
+      delete: () => graphCanvasRef.current?.deleteSelectedNodes(),
       escape: () => {
         if (uiStore.commandPaletteOpen) uiStore.closeCommandPalette();
       },
@@ -570,6 +573,7 @@ export default function App() {
             onResizeNode={handleResizeNode}
             onOpenNodeGraph={handleOpenNodeGraph}
             onDeleteNode={handleDeleteNode}
+            onGraphChanged={refreshGraph}
           />
         </RelationshipIndexProvider>
         <ValidationOverlay
