@@ -1,6 +1,8 @@
-import { FolderOpen, Clock, Moon, Sun, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { FolderOpen, Clock, Moon, Sun, Trash2, Settings } from "lucide-react";
 import type { RecentWorkspace } from "../../types";
 import { useUIStore } from "../../stores/useUIStore";
+import DefaultColorsSettingsDialog from "./DefaultColorsSettingsDialog";
 
 interface WelcomeScreenProps {
   recents: RecentWorkspace[];
@@ -19,6 +21,7 @@ export default function WelcomeScreen({
 }: WelcomeScreenProps) {
   const themeMode = useUIStore((s) => s.themeMode);
   const toggleThemeMode = useUIStore((s) => s.toggleThemeMode);
+  const [showSettings, setShowSettings] = useState(false);
 
   return (
     <div
@@ -32,6 +35,14 @@ export default function WelcomeScreen({
       }}
     >
       <button
+        onClick={() => setShowSettings(true)}
+        className="absolute top-6 right-16 p-2 rounded-lg hover:bg-white/10 transition-colors"
+        style={{ color: "var(--app-muted)" }}
+        title="Default relationship colors"
+      >
+        <Settings className="w-4 h-4" />
+      </button>
+      <button
         onClick={toggleThemeMode}
         className="absolute top-6 right-6 p-2 rounded-lg hover:bg-white/10 transition-colors"
         style={{ color: "var(--app-muted)" }}
@@ -39,6 +50,8 @@ export default function WelcomeScreen({
       >
         {themeMode === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </button>
+
+      {showSettings && <DefaultColorsSettingsDialog onClose={() => setShowSettings(false)} />}
       <div className="max-w-md w-full px-8">
         <div className="text-center mb-10">
           <h1 className="text-3xl mb-2" style={{ color: "var(--app-text)" }}>
