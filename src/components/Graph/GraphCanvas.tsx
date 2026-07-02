@@ -22,6 +22,9 @@ import { CanvasOverlay } from "../Canvas/CanvasOverlay";
 import { MoveNodeCommand } from "../../commands/MoveNodeCommand";
 import { CreateCanvasObjectCommand, UpdateCanvasObjectCommand, DeleteCanvasObjectCommand } from "../../commands/CanvasCommands";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
+import { DeleteNodesCommand } from "../../commands/DeleteNodesCommand";
+import { PasteWithEdgesCommand, type PasteEdgeInput } from "../../commands/PasteWithEdgesCommand";
+import type { PasteNodeInput } from "../../commands/PasteNodesCommand";
 import type { ConverterService } from "../../services/ConverterService";
 import type { CommandHistoryService } from "../../services/CommandHistoryService";
 import type { Graph, CanvasObject, DragOverride, NodeContentDocument } from "../../types";
@@ -191,6 +194,12 @@ function getCoveredCanvasObjects(obj: CanvasObject, canvasObjects: CanvasObject[
 export interface GraphCanvasHandle {
   /** Finds a random, node-free spot to spawn a new node within (or near) the current viewport. */
   getSpawnPosition: () => { x: number; y: number };
+  /** Copies the currently-selected nodes into the in-memory clipboard. No-op if nothing is selected. */
+  copySelectedNodes: () => void;
+  /** Pastes the clipboard as new nodes near the last known cursor position. No-op if the clipboard is empty. */
+  pasteClipboard: () => void;
+  /** Deletes all currently-selected nodes (and their edges) as one undoable step. No-op if nothing is selected. */
+  deleteSelectedNodes: () => void;
 }
 
 interface GraphCanvasInnerProps {
@@ -203,6 +212,7 @@ interface GraphCanvasInnerProps {
   onResizeNode: (nodeId: string, width: number, height: number) => void;
   onOpenNodeGraph: (nodeId: string) => void;
   onDeleteNode: (nodeId: string) => void;
+  onGraphChanged: () => void;
 }
 
 const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(function GraphCanvasInner({
@@ -215,6 +225,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   onResizeNode,
   onOpenNodeGraph,
   onDeleteNode,
+  onGraphChanged,
 }, ref) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const openCreateEdgeDialog = useUIStore((s) => s.openCreateEdgeDialog);
@@ -225,9 +236,145 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   const drawingState = useUIStore((s) => s.drawingState);
   const setCurrentTool = useUIStore((s) => s.setCurrentTool);
   const setDrawingState = useUIStore((s) => s.setDrawingState);
+  const selectedNodeIds = useUIStore((s) => s.selectedNodeIds);
+  const setSelectedNodeIds = useUIStore((s) => s.setSelectedNodeIds);
   const filterActive = useFilterStore((s) => s.active);
   const selectedFilterKeys = useFilterStore((s) => s.selectedKeys);
   const { screenToFlowPosition, getNodes } = useReactFlow();
+
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(
+    () => converterService.toReactFlow(graph),
+    [graph, converterService],
+  );
+
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // --- Selection clipboard + last-known cursor position (flow coords) ---
+  // Clipboard lives in a ref (not the UI store): it's write-heavy on every
+  // Ctrl+C and doesn't need to drive any re-render on its own.
+  const clipboardRef = useRef<{
+    nodes: { data: Record<string, unknown>; position: { x: number; y: number }; width?: number; height?: number }[];
+    edges: { sourceIndex: number; targetIndex: number; relationshipId: string; customLabel?: string; sourceHandle?: string; targetHandle?: string }[];
+  }>({ nodes: [], edges: [] });
+  const lastCursorFlowPosRef = useRef<{ x: number; y: number } | null>(null);
+  const [copyNotice, setCopyNotice] = useState<{ nodeCount: number; edgeCount: number } | null>(null);
+  const copyNoticeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onPaneMouseMove = useCallback(
+    (event: React.MouseEvent) => {
+      lastCursorFlowPosRef.current = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+    },
+    [screenToFlowPosition],
+  );
+
+  const copySelectedNodes = useCallback(() => {
+    const selected = getNodes().filter((n: any) => n.selected);
+    if (selected.length === 0) return;
+
+    const indexById = new Map(selected.map((n: any, i: number) => [n.id, i]));
+
+    const copiedEdges = (edges as any[])
+      .filter((e) => indexById.has(e.source) && indexById.has(e.target) && e.data?.relationshipType)
+      .map((e) => ({
+        sourceIndex: indexById.get(e.source)!,
+        targetIndex: indexById.get(e.target)!,
+        relationshipId: e.data.relationshipType as string,
+        customLabel: e.data.customLabel as string | undefined,
+        sourceHandle: e.sourceHandle as string | undefined,
+        targetHandle: e.targetHandle as string | undefined,
+      }));
+
+    clipboardRef.current = {
+      nodes: selected.map((n: any) => {
+        // Deliberately do NOT use getNodeDims()/`measured` here. `measured`
+        // is whatever the node's box happens to be rendered at right now,
+        // which can include transient, selection-only chrome (e.g. the
+        // expand chevron shown on a selected node). Baking that into the
+        // pasted node's forced width/height permanently inflates its box
+        // even after the chrome is gone. Only carry over a size the user
+        // actually set explicitly (persisted on data.width/height) — an
+        // un-resized node should paste at its own natural auto-size, same
+        // as a brand-new node would.
+        const width = typeof n.data?.width === "number" ? n.data.width : undefined;
+        const height = typeof n.data?.height === "number" ? n.data.height : undefined;
+        return { data: { ...n.data }, position: { ...n.position }, width, height };
+      }),
+      edges: copiedEdges,
+    };
+
+    if (copyNoticeTimeoutRef.current) clearTimeout(copyNoticeTimeoutRef.current);
+    setCopyNotice({ nodeCount: selected.length, edgeCount: copiedEdges.length });
+    copyNoticeTimeoutRef.current = setTimeout(() => setCopyNotice(null), 1600);
+  }, [getNodes, edges]);
+
+  const pasteClipboard = useCallback(() => {
+    const clipboard = clipboardRef.current;
+    if (clipboard.nodes.length === 0) return;
+
+    // Anchor the paste near the last known cursor position, falling back to
+    // a free spot in the viewport if the cursor was never tracked yet.
+    const bounds = wrapperRef.current?.getBoundingClientRect();
+    const fallbackAnchor = bounds
+      ? findFreeSpawnPosition(
+          {
+            x: screenToFlowPosition({ x: bounds.left, y: bounds.top }).x,
+            y: screenToFlowPosition({ x: bounds.left, y: bounds.top }).y,
+            width: bounds.width,
+            height: bounds.height,
+          },
+          getNodes(),
+        )
+      : { x: 0, y: 0 };
+    const anchor = lastCursorFlowPosRef.current ?? fallbackAnchor;
+
+    // Preserve relative layout between copied nodes: shift everyone by the
+    // same delta so the group's top-left corner lands at `anchor`.
+    const minX = Math.min(...clipboard.nodes.map((c) => c.position.x));
+    const minY = Math.min(...clipboard.nodes.map((c) => c.position.y));
+
+    const nodeInputs: PasteNodeInput[] = clipboard.nodes.map((c) => ({
+      type: (c.data.type as string) ?? "concept",
+      label: (c.data.label as string) ?? "Copy",
+      tags: Array.isArray(c.data.tags) ? [...(c.data.tags as string[])] : [],
+      content: c.data.content as any,
+      position: { x: anchor.x + (c.position.x - minX), y: anchor.y + (c.position.y - minY) },
+      width: c.width,
+      height: c.height,
+      color: c.data.color as string | undefined,
+    }));
+
+    const edgeInputs: PasteEdgeInput[] = clipboard.edges.map((e) => ({
+      sourceIndex: e.sourceIndex,
+      targetIndex: e.targetIndex,
+      relationshipId: e.relationshipId as any,
+      customLabel: e.customLabel,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle,
+    }));
+
+    void (async () => {
+      await commandHistoryService.execute(new PasteWithEdgesCommand(graph.id, nodeInputs, edgeInputs));
+      onGraphChanged();
+    })();
+  }, [commandHistoryService, graph.id, getNodes, screenToFlowPosition, onGraphChanged]);
+
+  const deleteSelectedNodes = useCallback(() => {
+    const ids = getNodes()
+      .filter((n: any) => n.selected)
+      .map((n: any) => (n.data?.nodeId as string | undefined) ?? n.id);
+    if (ids.length === 0) return;
+    void (async () => {
+      await commandHistoryService.execute(new DeleteNodesCommand(graph.id, ids));
+      onGraphChanged();
+    })();
+  }, [commandHistoryService, graph.id, getNodes, onGraphChanged]);
+
+  useEffect(() => {
+    return () => {
+      if (copyNoticeTimeoutRef.current) clearTimeout(copyNoticeTimeoutRef.current);
+    };
+  }, []);
 
   useImperativeHandle(ref, () => ({
     getSpawnPosition: () => {
@@ -245,15 +392,11 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
 
       return findFreeSpawnPosition(viewportRect, getNodes());
     },
-  }), [screenToFlowPosition, getNodes]);
+    copySelectedNodes,
+    pasteClipboard,
+    deleteSelectedNodes,
+  }), [screenToFlowPosition, getNodes, copySelectedNodes, pasteClipboard, deleteSelectedNodes]);
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => converterService.toReactFlow(graph),
-    [graph, converterService],
-  );
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // --- Zip state: stores each bundle's current zip-point ratio (0–1) ---
   // Keyed by `${sourceNodeId}:${relationshipType}`.
@@ -275,6 +418,16 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     setNodes(newNodes);
     setEdges(newEdges);
   }, [graph, converterService, setNodes, setEdges]);
+
+  // Keep the UI store's selectedNodeIds in sync with React Flow's own
+  // per-node `selected` flag, so other components (e.g. the selection
+  // toolbar) can react to selection without reaching into ReactFlow state.
+  useEffect(() => {
+    const ids = nodes.filter((n: any) => n.selected).map((n: any) => n.id);
+    const prev = selectedNodeIds;
+    const changed = ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
+    if (changed) setSelectedNodeIds(ids);
+  }, [nodes, selectedNodeIds, setSelectedNodeIds]);
 
   // Edges surviving the active relationship filter. Must run BEFORE the
   // bundle-geometry pass below (finding 5 in the handoff): bundling off
@@ -801,7 +954,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   const isEmpty = !hasNodes && !hasEdges && !hasCanvasObjects;
 
   return (
-    <div ref={wrapperRef} className="w-full h-full relative" style={{ background: "var(--app-bg)" }}>
+    <div ref={wrapperRef} className="w-full h-full relative" style={{ background: "var(--app-bg)" }} onMouseMove={onPaneMouseMove}>
       {edgeMarkers}
       <CanvasRenderer
         objects={graph.canvas.objects}
@@ -837,6 +990,10 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
           fitView
           minZoom={0.1}
           maxZoom={4}
+          multiSelectionKeyCode={["Shift", "Meta", "Control"]}
+          selectionKeyCode="Shift"
+          selectionOnDrag={currentTool === "select"}
+          panOnDrag={currentTool === "select" ? [1, 2] : true}
           defaultEdgeOptions={{
             type: "custom-edge",
             animated: false,
@@ -871,6 +1028,46 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
         onEditText={handleEditText}
         onGroupNodes={handleGroupNodes}
       />
+      {copyNotice !== null && (
+        <div
+          className="absolute left-1/2 top-16 z-50 -translate-x-1/2 rounded-lg border px-3 py-1.5 text-xs font-medium shadow-2xl backdrop-blur"
+          style={{ background: "var(--app-panel)", borderColor: "var(--app-border)", color: "var(--app-text)" }}
+        >
+          Copied {copyNotice.nodeCount} {copyNotice.nodeCount === 1 ? "node" : "nodes"}
+          {copyNotice.edgeCount > 0
+            ? ` + ${copyNotice.edgeCount} ${copyNotice.edgeCount === 1 ? "edge" : "edges"}`
+            : ""}
+        </div>
+      )}
+      {selectedNodeIds.length > 2 && (
+        <div
+          className="absolute left-1/2 top-3 z-40 -translate-x-1/2 flex items-center gap-1 rounded-xl border px-2 py-1.5 shadow-2xl backdrop-blur"
+          style={{ background: "var(--app-panel)", borderColor: "var(--app-border)" }}
+        >
+          <span className="px-2 text-xs font-medium" style={{ color: "var(--app-muted)" }}>
+            {selectedNodeIds.length} selected
+          </span>
+          <div className="w-px h-5" style={{ background: "var(--app-border)" }} />
+          <button
+            type="button"
+            onClick={copySelectedNodes}
+            className="px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-white/10 transition-colors"
+            style={{ color: "var(--app-text)" }}
+            title="Copy (Ctrl+C)"
+          >
+            Copy
+          </button>
+          <button
+            type="button"
+            onClick={deleteSelectedNodes}
+            className="px-2.5 py-1 rounded-lg text-xs font-medium hover:bg-red-500/20 transition-colors"
+            style={{ color: "#f87171" }}
+            title="Delete (Del)"
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 });
