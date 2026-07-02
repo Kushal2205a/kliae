@@ -49,6 +49,113 @@ function getNodeDims(node: any): { width: number; height: number } {
   return { width, height };
 }
 
+function rectsOverlap(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): boolean {
+  return !(
+    a.x + a.width <= b.x ||
+    a.x >= b.x + b.width ||
+    a.y + a.height <= b.y ||
+    a.y >= b.y + b.height
+  );
+}
+
+type Rect = { x: number; y: number; width: number; height: number };
+
+// Default dims assumed for a brand-new node before it has rendered/measured
+// itself. Matches BaseNode's fallback width/height.
+const NEW_NODE_WIDTH = 160;
+const NEW_NODE_HEIGHT = 56;
+
+const SPAWN_VIEWPORT_TRIES = 20;
+const SPAWN_EXPANSION_ROUNDS = 3;
+const SPAWN_EXPANSION_TRIES_PER_ROUND = 15;
+const SPAWN_EXPANSION_STEP = 0.25; // +25% of original viewport size per round
+
+const SPAWN_CASCADE_STEP = 32;
+const SPAWN_CASCADE_MAX_TRIES = 40;
+
+function collectExistingRects(existingNodes: any[]): Rect[] {
+  return existingNodes
+    .map((node) => {
+      const position = node.positionAbsolute ?? node.position;
+      if (!position) return null;
+      const { width, height } = getNodeDims(node);
+      return { x: position.x, y: position.y, width, height };
+    })
+    .filter((r): r is Rect => r !== null);
+}
+
+function candidateCollides(candidate: { x: number; y: number }, existingRects: Rect[]): boolean {
+  const candidateRect: Rect = { ...candidate, width: NEW_NODE_WIDTH, height: NEW_NODE_HEIGHT };
+  return existingRects.some((r) => rectsOverlap(candidateRect, r));
+}
+
+/** Uniformly random point inside `rect`, inset so the new node fully fits within it. */
+function randomPointInRect(rect: Rect): { x: number; y: number } {
+  const minX = rect.x;
+  const maxX = rect.x + rect.width - NEW_NODE_WIDTH;
+  const minY = rect.y;
+  const maxY = rect.y + rect.height - NEW_NODE_HEIGHT;
+
+  const x = maxX > minX ? minX + Math.random() * (maxX - minX) : rect.x + rect.width / 2 - NEW_NODE_WIDTH / 2;
+  const y = maxY > minY ? minY + Math.random() * (maxY - minY) : rect.y + rect.height / 2 - NEW_NODE_HEIGHT / 2;
+  return { x, y };
+}
+
+/** `rect` padded outward by `factor` of its own width/height on every side. */
+function expandRect(rect: Rect, factor: number): Rect {
+  const padX = rect.width * factor;
+  const padY = rect.height * factor;
+  return { x: rect.x - padX, y: rect.y - padY, width: rect.width + padX * 2, height: rect.height + padY * 2 };
+}
+
+/**
+ * Last-resort fallback: walks a diagonal cascade (like Figma/Miro paste
+ * offset) from `origin` until it finds a spot that doesn't overlap any
+ * existing node. Always terminates.
+ */
+function cascadeFallback(origin: { x: number; y: number }, existingRects: Rect[]): { x: number; y: number } {
+  let candidate = { x: origin.x, y: origin.y };
+  for (let i = 0; i < SPAWN_CASCADE_MAX_TRIES; i++) {
+    if (!candidateCollides(candidate, existingRects)) return candidate;
+    candidate = { x: origin.x + SPAWN_CASCADE_STEP * (i + 1), y: origin.y + SPAWN_CASCADE_STEP * (i + 1) };
+  }
+  return candidate;
+}
+
+/**
+ * Picks a random, node-free spawn point within the current viewport.
+ * Phase 1: sample randomly inside the visible viewport rect.
+ * Phase 2: if the viewport is packed, expand the search rect outward in
+ * three rounds (+25%, +50%, +75% of the original size) and keep sampling.
+ * Phase 3: if still nothing, fall back to a guaranteed diagonal cascade
+ * from the viewport center.
+ */
+function findFreeSpawnPosition(viewportRect: Rect, existingNodes: any[]): { x: number; y: number } {
+  const existingRects = collectExistingRects(existingNodes);
+
+  for (let i = 0; i < SPAWN_VIEWPORT_TRIES; i++) {
+    const candidate = randomPointInRect(viewportRect);
+    if (!candidateCollides(candidate, existingRects)) return candidate;
+  }
+
+  for (let round = 1; round <= SPAWN_EXPANSION_ROUNDS; round++) {
+    const rect = expandRect(viewportRect, SPAWN_EXPANSION_STEP * round);
+    for (let i = 0; i < SPAWN_EXPANSION_TRIES_PER_ROUND; i++) {
+      const candidate = randomPointInRect(rect);
+      if (!candidateCollides(candidate, existingRects)) return candidate;
+    }
+  }
+
+  const origin = {
+    x: viewportRect.x + viewportRect.width / 2 - NEW_NODE_WIDTH / 2,
+    y: viewportRect.y + viewportRect.height / 2 - NEW_NODE_HEIGHT / 2,
+  };
+  return cascadeFallback(origin, existingRects);
+}
+
 function getFlowNodeCenter(node: any, positionOverride?: { x: number; y: number }): { x: number; y: number } | null {
   const position = positionOverride ?? node.positionAbsolute ?? node.position;
   if (!position) return null;
@@ -82,8 +189,8 @@ function getCoveredCanvasObjects(obj: CanvasObject, canvasObjects: CanvasObject[
 }
 
 export interface GraphCanvasHandle {
-  /** Current viewport center in flow coordinates — where a new node should spawn. */
-  getViewportCenter: () => { x: number; y: number };
+  /** Finds a random, node-free spot to spawn a new node within (or near) the current viewport. */
+  getSpawnPosition: () => { x: number; y: number };
 }
 
 interface GraphCanvasInnerProps {
@@ -123,15 +230,22 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   const { screenToFlowPosition, getNodes } = useReactFlow();
 
   useImperativeHandle(ref, () => ({
-    getViewportCenter: () => {
+    getSpawnPosition: () => {
       const bounds = wrapperRef.current?.getBoundingClientRect();
       if (!bounds) return { x: 0, y: 0 };
-      return screenToFlowPosition({
-        x: bounds.left + bounds.width / 2,
-        y: bounds.top + bounds.height / 2,
-      });
+
+      const topLeft = screenToFlowPosition({ x: bounds.left, y: bounds.top });
+      const bottomRight = screenToFlowPosition({ x: bounds.right, y: bounds.bottom });
+      const viewportRect = {
+        x: topLeft.x,
+        y: topLeft.y,
+        width: bottomRight.x - topLeft.x,
+        height: bottomRight.y - topLeft.y,
+      };
+
+      return findFreeSpawnPosition(viewportRect, getNodes());
     },
-  }), [screenToFlowPosition]);
+  }), [screenToFlowPosition, getNodes]);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => converterService.toReactFlow(graph),

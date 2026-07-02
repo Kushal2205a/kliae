@@ -426,7 +426,7 @@ export default function App() {
     if (!s) return;
     const graphId = s.navigationService.getCurrentGraphId();
     if (!graphId) return;
-    const position = graphCanvasRef.current?.getViewportCenter();
+    const position = graphCanvasRef.current?.getSpawnPosition();
     const cmd = new CreateNodeCommand(graphId, "New Concept", position);
     await s.commandHistoryService.execute(cmd);
     refreshGraph();
