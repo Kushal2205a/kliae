@@ -10,6 +10,11 @@
   --app-muted: rgba(245, 245, 245, 0.58);
   --app-grid: rgba(255, 255, 255, 0.14);
   --app-accent: #a1a1aa;
+
+  /* Fixed regardless of theme — the syntax palette is tuned for a dark background */
+  --code-bg: #1e1e1e;
+  --code-border: rgba(255, 255, 255, 0.1);
+  --code-text: #abb2bf;
 }
 
 [data-theme="light"] {
@@ -52,6 +57,16 @@ html, body, #root {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #ffffff25;
+}
+
+/* Code blocks stay a fixed dark theme regardless of app theme, since the
+   One Dark syntax palette below is tuned for a dark background and loses
+   contrast badly on a light one. */
+.editor-code-block {
+  background: var(--code-bg) !important;
+  border: 1px solid var(--code-border);
+  color: var(--code-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .react-flow__controls button {

@@ -35,7 +35,7 @@ const theme = {
             listitem: "list-none",
         },
     },
-    code: "font-mono text-xs bg-black/30 rounded p-2 my-1 block overflow-x-auto whitespace-pre",
+    code: "font-mono text-xs rounded p-2 my-1 block overflow-x-auto whitespace-pre editor-code-block",
     codeHighlight: {
         comment:        "text-[#5c6370] italic",
         prolog:         "text-[#5c6370]",
@@ -69,7 +69,6 @@ const theme = {
         punctuation:    "text-[#abb2bf]",
     },
 };
-
 function Placeholder() {
     return (
         <div className="absolute left-1 top-1 pointer-events-none text-xs opacity-40">
