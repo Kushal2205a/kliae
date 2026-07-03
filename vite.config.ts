@@ -9,6 +9,7 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     watch: {
+      // Ignore Rust build artifacts to avoid unnecessary dev server reloads
       ignored: ['**/src-tauri/target/**'],
     },
   },
