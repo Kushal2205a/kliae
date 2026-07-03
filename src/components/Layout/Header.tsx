@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Search, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X } from "lucide-react";
+import { Undo2, Redo2, Search, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard } from "lucide-react";
 import Breadcrumbs from "../Navigation/Breadcrumbs";
 import type { Breadcrumb } from "../../types";
 import type { CanvasTool } from "../../stores/useUIStore";
@@ -6,6 +6,7 @@ import { useUIStore } from "../../stores/useUIStore";
 import { useFilterStore } from "../../stores/useFilterStore";
 import { BUILTIN_RELATIONSHIPS} from "../../constants/relationships";
 import { useState, useRef, useEffect } from "react";
+import ShortcutsModal from "./ShortcutsModal";
 
 interface HeaderProps {
   workspaceName: string;
@@ -53,6 +54,7 @@ export default function Header({
 
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   // Close popover on outside click
   useEffect(() => {
@@ -250,7 +252,18 @@ export default function Header({
         >
           {themeMode === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </button>
+
+        <button
+          onClick={() => setShortcutsOpen(true)}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          style={{ color: "var(--app-muted)" }}
+          title="Keyboard shortcuts"
+        >
+          <Keyboard className="w-4 h-4" />
+        </button>
       </div>
+
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </header>
   );
 }
