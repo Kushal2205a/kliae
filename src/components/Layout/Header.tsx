@@ -38,7 +38,7 @@ export default function Header({
   onUndo,
   onRedo,
   onNavigateBreadcrumb,
-  onOpenCommandPalette,
+
   onAddNode,
   onGoHome,
   currentTool,
@@ -89,7 +89,7 @@ export default function Header({
         {onGoHome && (
           <button
             onClick={onGoHome}
-            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--app-hover)] transition-colors"
             style={{ color: "var(--app-muted)" }}
             title="Back to Main Menu"
           >
@@ -118,9 +118,9 @@ export default function Header({
                     key={tool.id}
                     onClick={() => onToolChange(tool.id)}
                     className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
-                      active ? "bg-white/15 text-white shadow-sm" : "hover:bg-white/10"
+                      active ? "bg-[var(--app-active)] shadow-sm" : "hover:bg-[var(--app-hover)]"
                     }`}
-                    style={{ color: active ? undefined : "var(--app-muted)" }}
+                    style={{ color: active ? "var(--app-text)" : "var(--app-muted)" }}
                     title={tool.label}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -135,7 +135,7 @@ export default function Header({
 
         <button
           onClick={onAddNode}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-sm hover:bg-white/15 transition-all duration-150"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-sm hover:bg-[var(--app-active)] transition-all duration-150"
           style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}
           title="Add Node (Ctrl+N)"
         >
@@ -148,7 +148,7 @@ export default function Header({
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg hover:bg-[var(--app-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           style={{ color: "var(--app-muted)" }}
           title="Undo (Ctrl+Z)"
         >
@@ -157,7 +157,7 @@ export default function Header({
         <button
           onClick={onRedo}
           disabled={!canRedo}
-          className="p-2 rounded-lg hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="p-2 rounded-lg hover:bg-[var(--app-hover)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           style={{ color: "var(--app-muted)" }}
           title="Redo (Ctrl+Shift+Z)"
         >
@@ -166,20 +166,13 @@ export default function Header({
 
         <div className="w-px h-6 mx-1" style={{ background: "var(--app-border)" }} />
 
-        <button
-          onClick={onOpenCommandPalette}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          style={{ color: "var(--app-muted)" }}
-          title="Command Palette (Ctrl+Shift+P)"
-        >
-          <Search className="w-4 h-4" />
-        </button>
+        
 
         {/* Filter popover */}
         <div className="relative" ref={filterRef}>
           <button
             onClick={() => setFilterOpen((v) => !v)}
-            className={`p-2 rounded-lg transition-colors ${filterActive ? "bg-white/15" : "hover:bg-white/10"}`}
+            className={`p-2 rounded-lg transition-colors ${filterActive ? "bg-[var(--app-active)]" : "hover:bg-[var(--app-hover)]"}`}
             style={{ color: filterActive ? "var(--app-text)" : "var(--app-muted)" }}
             title="Filter by relationship type"
           >
@@ -198,7 +191,7 @@ export default function Header({
                 {filterActive && (
                   <button
                     onClick={() => { clearFilter(); setFilterOpen(false); }}
-                    className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded hover:bg-[var(--app-hover)] transition-colors"
                     style={{ color: "var(--app-muted)" }}
                   >
                     <X className="w-3 h-3" /> Clear
@@ -210,7 +203,7 @@ export default function Header({
               <div className="px-3 py-2 border-b" style={{ borderColor: "var(--app-border)" }}>
                 <button
                   onClick={toggleActive}
-                  className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${filterActive ? "bg-white/10" : "hover:bg-white/5"}`}
+                  className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${filterActive ? "bg-[var(--app-active)]" : "hover:bg-[var(--app-hover)]"}`}
                   style={{ color: "var(--app-text)" }}
                 >
                   {filterActive ? "✓ Filter active" : "Enable filter"}
@@ -227,7 +220,7 @@ export default function Header({
                         toggleKey(key);
                         if (!filterActive) toggleActive();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-white/5 transition-colors"
+                      className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-[var(--app-hover)] transition-colors"
                       style={{ color: "var(--app-text)" }}
                     >
                       <span
@@ -246,7 +239,7 @@ export default function Header({
 
         <button
           onClick={toggleThemeMode}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          className="p-2 rounded-lg hover:bg-[var(--app-hover)] transition-colors"
           style={{ color: "var(--app-muted)" }}
           title={themeMode === "dark" ? "Switch to light theme" : "Switch to dark theme"}
         >
@@ -255,7 +248,7 @@ export default function Header({
 
         <button
           onClick={() => setShortcutsOpen(true)}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          className="p-2 rounded-lg hover:bg-[var(--app-hover)] transition-colors"
           style={{ color: "var(--app-muted)" }}
           title="Keyboard shortcuts"
         >

@@ -9,8 +9,8 @@ import {
 import { getRelationshipMarkerKey } from "../../constants/relationships";
 
 const LABEL_OFFSET_Y = 14;
-const EDGE_LABEL_BG_ALPHA = "15";
-const EDGE_LABEL_SELECTED_BG_ALPHA = "28";
+const EDGE_LABEL_BG_ALPHA = "26";
+const EDGE_LABEL_SELECTED_BG_ALPHA = "3d";
 
 /**
  * Builds an SVG path string for a bundled edge.
@@ -174,7 +174,7 @@ function CustomEdge({
       {label && isBundleLeader && (
         <EdgeLabelRenderer>
           <div
-            className={`absolute px-2 py-0.5 rounded text-xs font-medium${isZippable ? " nopan" : ""}`}
+            className={`absolute px-2.5 py-1 rounded-md text-xs font-medium tracking-[-0.005em]${isZippable ? " nopan" : ""}`}
             style={{
               transform: `translate(-50%, -50%) translate(${displayLabelX}px, ${displayLabelY - labelOffsetY}px)`,
               backgroundColor: isBundleLabel

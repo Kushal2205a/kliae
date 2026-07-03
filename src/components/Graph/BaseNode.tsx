@@ -243,13 +243,14 @@ function BaseNode({ id, data, selected }: NodeProps) {
     <>
       <div
         className={`
-          relative flex h-full w-full flex-col px-4 py-3 rounded-lg border-2 shadow-lg
+          relative flex h-full w-full flex-col px-4 py-3.5 border
           ${nodeWidth ? "" : imageOnlyContent ? "max-w-none" : "max-w-[320px]"}
           transition-all duration-150
-          ${selected ? "ring-2 ring-white/60 border-white/80" : "border-white/10"}
         `}
         style={{
-          borderColor: selected ? undefined : `${color}40`,
+          borderColor: selected ? "var(--app-border-focus)" : `${color}55`,
+          borderRadius: "var(--radius-card)",
+          boxShadow: selected ? "0 0 0 3px var(--app-border-focus), var(--shadow-2)" : "var(--shadow-1)",
           width: nodeWidth ? "100%" : undefined,
           height: nodeHeight ? "100%" : undefined,
           minWidth: dynamicMinWidth,
@@ -273,14 +274,14 @@ function BaseNode({ id, data, selected }: NodeProps) {
           }}
         />
 
-        <Handle type="target" position={Position.Top} id="top-target" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="source" position={Position.Top} id="top-source" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="target" position={Position.Bottom} id="bottom-target" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="source" position={Position.Bottom} id="bottom-source" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="target" position={Position.Left} id="left-target" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="source" position={Position.Left} id="left-source" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="target" position={Position.Right} id="right-target" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
-        <Handle type="source" position={Position.Right} id="right-source" className="!w-3 !h-3 !border-2 !border-white/30" style={{ background: "var(--app-surface-2)" }} />
+        <Handle type="target" position={Position.Top} id="top-target" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="source" position={Position.Top} id="top-source" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="target" position={Position.Bottom} id="bottom-target" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="source" position={Position.Bottom} id="bottom-source" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="target" position={Position.Left} id="left-target" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="source" position={Position.Left} id="left-source" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="target" position={Position.Right} id="right-target" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
+        <Handle type="source" position={Position.Right} id="right-source" className="!w-3 !h-3 !border-2" style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border-strong)" }} />
 
         <div className="relative flex flex-1 min-h-0 flex-col overflow-hidden">
 
@@ -293,12 +294,12 @@ function BaseNode({ id, data, selected }: NodeProps) {
               onChange={(e) => setEditValue(e.target.value)}
               onBlur={commitEdit}
               onKeyDown={handleTitleKeyDown}
-              className="text-sm font-medium border border-white/30 rounded px-1 py-0.5 outline-none min-w-0 flex-1 text-center"
-              style={{ background: "var(--app-bg)", color: "var(--app-text)" }}
+              className="text-[13.5px] font-semibold tracking-[-0.01em] border rounded px-1 py-0.5 outline-none min-w-0 flex-1 text-center"
+              style={{ background: "var(--app-bg)", color: "var(--app-text)", borderColor: "var(--app-border-focus)" }}
             />
           ) : (
             <span
-              className="text-sm font-medium truncate cursor-pointer hover:bg-white/5 rounded px-1 -mx-1 text-center"
+              className="text-[13.5px] font-semibold tracking-[-0.01em] truncate cursor-pointer hover:bg-[var(--app-hover)] rounded px-1 -mx-1 text-center"
               onDoubleClick={startEditing}
               title="Double-click to rename"
             >
@@ -306,7 +307,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
             </span>
           )}
           {childGraphId && (
-            <ChevronRight className="w-4 h-4 text-white/40 flex-shrink-0" />
+            <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "var(--app-muted)" }} />
           )}
           {subtreeHasMatch && (
             <span
@@ -320,7 +321,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
         {/* Content */}
         {hasContent && (
           <>
-            <div className="my-3 flex-shrink-0 border-t border-white/15" />
+            <div className="my-3.5 flex-shrink-0 border-t" style={{ borderColor: "var(--app-border)" }} />
 
             {contentEditing ? (
               <>
@@ -351,7 +352,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
                   <div key={block.id} className="relative group/img">
                     <button
                       type="button"
-                      className={`nodrag nowheel cursor-zoom-in rounded border border-white/10 bg-black/20 p-0 w-full ${shouldFillImageArea ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden" : ""}`}
+                      className={`nodrag nowheel cursor-zoom-in rounded border bg-black/20 p-0 w-full ${shouldFillImageArea ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden" : ""}`}
+                      style={{ borderColor: "var(--app-border)" }}
                       onPointerDown={(e) => e.stopPropagation()}
                       onClick={() => setPreviewImage(block)}
                     >
@@ -403,7 +405,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
           <img
             src={previewImage.src}
             alt={previewImage.alt ?? ""}
-            className="max-h-full max-w-full rounded-lg border border-white/10 bg-[var(--app-surface-2)] object-contain shadow-2xl"
+            className="max-h-full max-w-full rounded-lg border bg-[var(--app-surface-2)] object-contain"
+            style={{ borderColor: "var(--app-border)", boxShadow: "var(--shadow-3)" }}
           />
         </div>,
         document.body,
@@ -411,13 +414,13 @@ function BaseNode({ id, data, selected }: NodeProps) {
 
       {ctxMenu && createPortal(
         <div
-          className="fixed z-50 bg-[var(--app-surface-2)] border border-white/10 rounded-lg shadow-xl py-1 min-w-[150px]"
-          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          className="fixed z-50 bg-[var(--app-surface-2)] border rounded-lg py-1 min-w-[150px]"
+          style={{ left: ctxMenu.x, top: ctxMenu.y, borderColor: "var(--app-border)", boxShadow: "var(--shadow-3)" }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           {!hasContent ? (
             <button
-              className="w-full text-left px-3 py-1.5 text-sm text-white/80 hover:bg-white/10 transition-colors"
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--app-hover)] transition-colors" style={{ color: "var(--app-text-secondary)" }}
               onClick={() => {
                 setCtxMenu(null);
                 handleAddContent();
@@ -427,7 +430,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
             </button>
           ) : (
             <button
-              className="w-full text-left px-3 py-1.5 text-sm text-white/80 hover:bg-white/10 transition-colors"
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--app-hover)] transition-colors" style={{ color: "var(--app-text-secondary)" }}
               onClick={() => {
                 setCtxMenu(null);
                 useUIStore.getState().setContentMode("edit");
@@ -437,7 +440,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
             </button>
           )}
           <button
-            className="w-full text-left px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10 transition-colors"
+            className="w-full text-left px-3 py-1.5 text-sm hover:bg-[var(--app-danger-hover)] transition-colors"
+            style={{ color: "var(--app-danger-text)" }}
             onClick={() => {
               setCtxMenu(null);
               onDeleteNode(id);
