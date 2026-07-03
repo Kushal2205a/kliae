@@ -5,19 +5,18 @@
     "lib": ["ES2023"],
     "types": ["node"],
     "skipLibCheck": true,
-
     /* Bundler mode */
     "module": "nodenext",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
+  // Only vite.config.ts runs in the Node context; app code is covered by tsconfig.app.json
   "include": ["vite.config.ts"]
 }
