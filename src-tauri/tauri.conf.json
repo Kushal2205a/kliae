@@ -43,7 +43,10 @@
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ2OEJGMDA3N0VGQ0Y5QUQKUldTdCtmeCtCL0NMMW0xRGNWMXRpamhaQ09ZSE1RaHQycis1d21KRXhZaFkzc0JBSGxFSEhUSm0K",
       "endpoints": [
         "https://github.com/Kushal2205a/kliae/releases/latest/download/latest.json"
-      ]
+      ],
+      "windows": {
+        "installMode": "basicUi"
+      }
     }
   }
 }
