@@ -24,7 +24,7 @@ import { CreateCanvasObjectCommand, UpdateCanvasObjectCommand, DeleteCanvasObjec
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
 import { DeleteNodesCommand } from "../../commands/DeleteNodesCommand";
 import { PasteWithEdgesCommand, type PasteEdgeInput } from "../../commands/PasteWithEdgesCommand";
-import type { PasteNodeInput } from "../../commands/PasteNodesCommand";
+import { PasteNodesCommand, type PasteNodeInput } from "../../commands/PasteNodesCommand";
 import type { ConverterService } from "../../services/ConverterService";
 import type { CommandHistoryService } from "../../services/CommandHistoryService";
 import type { WorkspaceService } from "../../services/WorkspaceService";
@@ -71,6 +71,27 @@ type Rect = { x: number; y: number; width: number; height: number };
 // itself. Matches BaseNode's fallback width/height.
 const NEW_NODE_WIDTH = 160;
 const NEW_NODE_HEIGHT = 56;
+
+const NEW_IMAGE_NODE_WIDTH = 280;
+const NEW_IMAGE_NODE_HEIGHT = 220;
+
+function stripExtension(filename: string): string {
+  const idx = filename.lastIndexOf(".");
+  return idx > 0 ? filename.slice(0, idx) : filename;
+}
+
+function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      result ? resolve(result) : reject(new Error("Failed to read file"));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 
 const SPAWN_VIEWPORT_TRIES = 20;
 const SPAWN_EXPANSION_ROUNDS = 3;
@@ -373,6 +394,85 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     })();
   }, [commandHistoryService, graph.id, getNodes, onGraphChanged]);
 
+  const createImageNodeFromFile = useCallback(
+    async (file: File, position: { x: number; y: number }) => {
+      if (!file.type.startsWith("image/")) return;
+
+      const src = await readFileAsDataURL(file);
+      const label = stripExtension(file.name) || "Image";
+
+      const nodeInput: PasteNodeInput = {
+        type: "concept",
+        label,
+        tags: [],
+        content: {
+          schemaVersion: 1,
+          blocks: [{ id: crypto.randomUUID(), type: "image", src, alt: file.name }],
+        },
+        position: {
+          x: position.x - NEW_IMAGE_NODE_WIDTH / 2,
+          y: position.y - NEW_IMAGE_NODE_HEIGHT / 2,
+        },
+        width: NEW_IMAGE_NODE_WIDTH,
+        height: NEW_IMAGE_NODE_HEIGHT,
+      };
+
+      await commandHistoryService.execute(new PasteNodesCommand(graph.id, [nodeInput]));
+      onGraphChanged();
+    },
+    [commandHistoryService, graph.id, onGraphChanged],
+  );
+
+  // Dropping image files from the OS directly onto the canvas
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    if (event.dataTransfer.types.includes("Files")) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      const files = Array.from(event.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+      if (files.length === 0) return;
+      event.preventDefault();
+
+      const dropPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      files.forEach((file, i) => {
+        void createImageNodeFromFile(file, { x: dropPosition.x + i * 24, y: dropPosition.y + i * 24 });
+      });
+    },
+    [screenToFlowPosition, createImageNodeFromFile],
+  );
+
+  // Pasting an image from the clipboard (e.g. a copied screenshot) onto the canvas
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      const active = document.activeElement as HTMLElement | null;
+      // Don't hijack paste while typing in a text field or the rich text editor
+      if (active?.isContentEditable || active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") {
+        return;
+      }
+
+      const items = Array.from(event.clipboardData?.items ?? []);
+      const imageFiles = items
+        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null);
+
+      if (imageFiles.length === 0) return;
+      event.preventDefault();
+
+      const anchor = lastCursorFlowPosRef.current ?? { x: 0, y: 0 };
+      imageFiles.forEach((file, i) => {
+        void createImageNodeFromFile(file, { x: anchor.x + i * 24, y: anchor.y + i * 24 });
+      });
+    };
+
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, [createImageNodeFromFile]);
+
   useEffect(() => {
     return () => {
       if (copyNoticeTimeoutRef.current) clearTimeout(copyNoticeTimeoutRef.current);
@@ -432,7 +532,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     if (changed) setSelectedNodeIds(ids);
   }, [nodes, selectedNodeIds, setSelectedNodeIds]);
 
-  
+
 
   // Edges surviving the active relationship filter. Must run BEFORE the
   // bundle-geometry pass below (finding 5 in the handoff): bundling off
@@ -588,7 +688,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
       });
     }
 
-   
+
 
     // --- Pass 2: annotate every surviving edge that belongs to a bundle ---
     return (filteredEdges as any[]).map((edge: any) => {
@@ -988,7 +1088,14 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   const isEmpty = !hasNodes && !hasEdges && !hasCanvasObjects;
 
   return (
-    <div ref={wrapperRef} className="w-full h-full relative" style={{ background: "var(--app-bg)" }} onMouseMove={onPaneMouseMove}>
+    <div
+      ref={wrapperRef}
+      className="w-full h-full relative"
+      style={{ background: "var(--app-bg)" }}
+      onMouseMove={onPaneMouseMove}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
       {edgeMarkers}
       <CanvasRenderer
         objects={graph.canvas.objects}
