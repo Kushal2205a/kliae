@@ -111,6 +111,17 @@ Download the latest build for your platform from the [Releases page](https://git
 
 Each release also ships a `.sig` signature file alongside the binary for verification.
 
+### Installation Notes
+
+**macOS**: The app isn't notarized yet, so Gatekeeper will block it on first launch with a message like "can't be opened because Apple cannot check it for malicious software." To open it anyway, right-click the app and choose **Open**, then confirm in the dialog. Alternatively, run:
+```bash
+xattr -cr /Applications/Kliae.app
+```
+
+**Windows**: The installer isn't code-signed yet, so SmartScreen may show an "Unknown publisher" warning. Click **More info**, then **Run anyway** to proceed.
+
+Both warnings are expected for an early beta release without paid signing certificates, and will be resolved in a future release.
+
 ## Tech Stack
 
 | Layer | Technology |
