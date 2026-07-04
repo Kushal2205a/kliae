@@ -59,13 +59,20 @@ export default function DefaultColorsSettingsDialog({ onClose }: DefaultColorsSe
           {EDITABLE_RELATIONSHIPS.map((rel) => (
             <div key={rel.id} className="flex items-center gap-3 px-1 py-1.5">
               <label className="relative flex-shrink-0">
-                <input
-                  type="color"
-                  value={colorFor(rel.id)}
-                  onChange={(e) => handleChange(rel.id, e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent p-0"
-                  title={`Pick a color for ${rel.displayName}`}
-                />
+                <label className="relative w-6 h-6 cursor-pointer shrink-0">
+                  <input
+                    type="color"
+                    value={rel.color ?? "#6b7280"}
+                    onChange={(e) => handleChange(rel.displayName, e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    title={`Pick a color for ${rel.displayName}`}
+                  />
+
+                  <div
+                    className="w-6 h-6 rounded-full border border-white/10"
+                    style={{ backgroundColor: rel.color ?? "#6b7280" }}
+                  />
+                </label>
               </label>
               <span className="flex-1 text-sm" style={{ color: "var(--app-text)" }}>
                 {rel.displayName}
