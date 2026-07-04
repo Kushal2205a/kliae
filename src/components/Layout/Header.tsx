@@ -1,4 +1,4 @@
-import { Undo2, Redo2, Search, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard } from "lucide-react";
+import { Undo2, Redo, Search, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard } from "lucide-react";
 import Breadcrumbs from "../Navigation/Breadcrumbs";
 import type { Breadcrumb } from "../../types";
 import type { CanvasTool } from "../../stores/useUIStore";
@@ -161,7 +161,7 @@ export default function Header({
           style={{ color: "var(--app-muted)" }}
           title="Redo (Ctrl+Shift+Z)"
         >
-          <Redo2 className="w-4 h-4" />
+          <Redo className="w-4 h-4" />
         </button>
 
         <div className="w-px h-6 mx-1" style={{ background: "var(--app-border)" }} />
