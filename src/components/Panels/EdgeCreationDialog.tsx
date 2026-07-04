@@ -28,7 +28,7 @@ export default function EdgeCreationDialog({
   // Read fresh each render so app-wide default color overrides (edited from
   // the welcome screen) are reflected without needing a page reload.
   const nonCustomBuiltins = getEffectiveBuiltinRelationships().filter((r) => r.id !== "custom");
-
+  const [search, setSearch] = useState("");
   const handleConfirm = () => {
     if (selection.kind === "builtin") {
       onConfirm(selection.id);
@@ -38,6 +38,16 @@ export default function EdgeCreationDialog({
       onConfirm("custom", customLabel);
     }
   };
+
+  const q = search.trim().toLowerCase();
+
+  const filteredBuiltins = nonCustomBuiltins.filter(rel =>
+    rel.displayName.toLowerCase().includes(q)
+  );
+
+  const filteredCustom = customRelationships.filter(rel =>
+    rel.displayName.toLowerCase().includes(q)
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
@@ -52,8 +62,23 @@ export default function EdgeCreationDialog({
           <span style={{ color: "var(--app-text)" }}>{targetLabel}</span>
         </div>
 
+        <div className="mb-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search relationships..."
+            className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none"
+            style={{
+              background: "var(--app-surface-2)",
+              border: "1px solid var(--app-border)",
+              color: "var(--app-text)",
+            }}
+          />
+        </div>
+
         <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
-          {nonCustomBuiltins.map((rel) => (
+          {filteredBuiltins.map((rel) => (
             <button
               key={rel.id}
               onClick={() => setSelection({ kind: "builtin", id: rel.id })}
@@ -76,7 +101,7 @@ export default function EdgeCreationDialog({
               <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide" style={{ color: "var(--app-muted)" }}>
                 Custom
               </div>
-              {customRelationships.map((rel) => (
+              {filteredCustom.map((rel) => (
                 <button
                   key={rel.displayName}
                   onClick={() => setSelection({ kind: "existing-custom", label: rel.displayName })}
@@ -95,7 +120,15 @@ export default function EdgeCreationDialog({
               ))}
             </>
           )}
-
+          {filteredBuiltins.length === 0 &&
+            filteredCustom.length === 0 && (
+              <div
+                className="px-3 py-6 text-center text-sm"
+                style={{ color: "var(--app-muted)" }}
+              >
+                No relationships found.
+              </div>
+            )}
           <button
             onClick={() => setSelection({ kind: "new-custom" })}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
