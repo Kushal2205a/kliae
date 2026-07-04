@@ -57,7 +57,7 @@ export default function RelationshipInspector({
   const currentRel =
     relationshipId === "custom" && customLabel
       ? customRelationships.find((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
-        ?? getEffectiveRelationshipDefinition(relationshipId)
+      ?? getEffectiveRelationshipDefinition(relationshipId)
       : getEffectiveRelationshipDefinition(relationshipId);
 
   useEffect(() => {
@@ -136,14 +136,40 @@ export default function RelationshipInspector({
         </button>
       </div>
 
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm" style={{ background: "var(--app-surface-2)" }}>
-        <span style={{ color: "var(--app-text)" }}>{sourceNode?.label ?? "?"}</span>
-        <span className="text-xs" style={{ color: "var(--app-muted)" }}>──</span>
-        <span className="font-medium" style={{ color: "var(--app-accent)" }}>
+      <div
+        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-w-0"
+        style={{ background: "var(--app-surface-2)" }}
+      >
+        <span
+          className="flex-1 truncate"
+          title={sourceNode?.label}
+          style={{ color: "var(--app-text)" }}
+        >
+          {sourceNode?.label ?? "?"}
+        </span>
+
+        <span className="shrink-0 text-xs" style={{ color: "var(--app-muted)" }}>
+          ──
+        </span>
+
+        <span
+          className="shrink-0 font-medium"
+          style={{ color: "var(--app-accent)" }}
+        >
           {resolveRelationshipLabel(edge.relationship)}
         </span>
-        <span className="text-xs" style={{ color: "var(--app-muted)" }}>──➤</span>
-        <span style={{ color: "var(--app-text)" }}>{targetNode?.label ?? "?"}</span>
+
+        <span className="shrink-0 text-xs" style={{ color: "var(--app-muted)" }}>
+          ──➤
+        </span>
+
+        <span
+          className="flex-1 truncate text-right"
+          title={targetNode?.label}
+          style={{ color: "var(--app-text)" }}
+        >
+          {targetNode?.label ?? "?"}
+        </span>
       </div>
 
       <div className="relative" ref={dropdownRef}>
@@ -227,7 +253,7 @@ export default function RelationshipInspector({
               style={{
                 background:
                   relationshipId === "custom" &&
-                  !customRelationships.some((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
+                    !customRelationships.some((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
                     ? "var(--app-surface)"
                     : undefined,
                 color: "var(--app-muted)",
