@@ -1,4 +1,4 @@
-import { Undo2, Redo, Search, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard } from "lucide-react";
+import { Undo2, Redo, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard } from "lucide-react";
 import Breadcrumbs from "../Navigation/Breadcrumbs";
 import type { Breadcrumb } from "../../types";
 import type { CanvasTool } from "../../stores/useUIStore";
