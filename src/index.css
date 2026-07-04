@@ -1,7 +1,5 @@
 @import "tailwindcss";
 
-@import "geist/font/sans.css";
-@import "geist/font/mono.css";
 :root {
   --app-bg: #0a0a0a;
   --app-surface: #141414;
@@ -78,7 +76,7 @@ html, body, #root {
   overflow: hidden;
   background: var(--app-bg);
   color: var(--app-text);
-  font-family:  "Geist", sans-serif;
+  font-family:  "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.006em;
@@ -111,7 +109,7 @@ html, body, #root {
   border: 1px solid var(--code-border);
   color: var(--code-text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-   font-family: "Geist Mono", monospace;
+   font-family:  "Inter", sans-serif;
 }
 
 .react-flow__controls button {
