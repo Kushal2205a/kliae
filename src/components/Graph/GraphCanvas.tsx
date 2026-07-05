@@ -460,7 +460,13 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
         .map((item) => item.getAsFile())
         .filter((f): f is File => f !== null);
 
-      if (imageFiles.length === 0) return;
+      if (imageFiles.length === 0) {
+        // No image on the OS clipboard (e.g. the user copied our own nodes
+        // with Ctrl+C), so fall back to the canvas's internal node clipboard.
+        event.preventDefault();
+        pasteClipboard();
+        return;
+      }
       event.preventDefault();
 
       const anchor = lastCursorFlowPosRef.current ?? { x: 0, y: 0 };
@@ -471,7 +477,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
 
     document.addEventListener("paste", handlePaste);
     return () => document.removeEventListener("paste", handlePaste);
-  }, [createImageNodeFromFile]);
+  }, [createImageNodeFromFile, pasteClipboard]);
 
   useEffect(() => {
     return () => {

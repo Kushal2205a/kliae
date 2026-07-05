@@ -442,7 +442,6 @@ export default function App() {
       "ctrl+n": handleCreateNode,
       "ctrl+shift+p": () => uiStore.openCommandPalette(),
       "ctrl+c": () => graphCanvasRef.current?.copySelectedNodes(),
-      "ctrl+v": () => graphCanvasRef.current?.pasteClipboard(),
       delete: () => graphCanvasRef.current?.deleteSelectedNodes(),
       escape: () => {
         if (uiStore.commandPaletteOpen) uiStore.closeCommandPalette();
