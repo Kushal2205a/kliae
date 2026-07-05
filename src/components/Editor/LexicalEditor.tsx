@@ -5,7 +5,7 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
-import LoadEditorStatePlugin from "./LoadEditorStatePlugin";
+import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode, registerCodeHighlighting } from "@lexical/code";
@@ -91,6 +91,7 @@ export default function LexicalEditor({
     const initialConfig = {
         namespace: "KnowledgeGraphEditor",
         theme,
+        editorState: initialState || undefined,
         nodes: [
             ListNode,
             ListItemNode,
@@ -132,7 +133,7 @@ export default function LexicalEditor({
                 <HistoryPlugin />
                 <ListPlugin />
                 <CodeHighlightPlugin />
-                <LoadEditorStatePlugin editorState={initialState} />
+                <AutoFocusPlugin defaultSelection="rootEnd" />
                 <OnChangePlugin
                     onChange={(editorState) => {
                         onChange?.(JSON.stringify(editorState));
