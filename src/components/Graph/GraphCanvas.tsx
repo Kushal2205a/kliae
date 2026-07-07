@@ -12,6 +12,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import ConceptNode from "./ConceptNode";
+import AnchorNode from "./AnchorNode";
 import CustomEdge from "./CustomEdge";
 import { BUILTIN_RELATIONSHIPS, getFilterKey, getRelationshipMarkerKey } from "../../constants/relationships";
 import { useUIStore } from "../../stores/useUIStore";
@@ -29,9 +30,9 @@ import type { ConverterService } from "../../services/ConverterService";
 import type { CommandHistoryService } from "../../services/CommandHistoryService";
 import type { WorkspaceService } from "../../services/WorkspaceService";
 import type { Graph, CanvasObject, DragOverride, NodeContentDocument } from "../../types";
-import { DEFAULT_CANVAS_STYLE } from "../../types";
+import { DEFAULT_CANVAS_STYLE, ANCHOR_NODE_TYPE } from "../../types";
 
-const nodeTypes = { concept: ConceptNode };
+const nodeTypes = { concept: ConceptNode, anchor: AnchorNode };
 const edgeTypes = { "custom-edge": CustomEdge };
 const EDGE_MARKER_REF_X = 0.5;
 
@@ -293,7 +294,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   );
 
   const copySelectedNodes = useCallback(() => {
-    const selected = getNodes().filter((n: any) => n.selected);
+    const selected = getNodes().filter((n: any) => n.selected && n.type !== ANCHOR_NODE_TYPE);
     if (selected.length === 0) return;
 
     const indexById = new Map(selected.map((n: any, i: number) => [n.id, i]));
@@ -385,7 +386,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
 
   const deleteSelectedNodes = useCallback(() => {
     const ids = getNodes()
-      .filter((n: any) => n.selected)
+      .filter((n: any) => n.selected && n.type !== ANCHOR_NODE_TYPE)
       .map((n: any) => (n.data?.nodeId as string | undefined) ?? n.id);
     if (ids.length === 0) return;
     void (async () => {
@@ -825,6 +826,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
 
   const onNodeDoubleClick = useCallback(
     (_event: any, node: any) => {
+      if (node.type === ANCHOR_NODE_TYPE) return;
       const data = node.data as any;
       if (data.nodeId) {
         onOpenNodeGraph(data.nodeId);

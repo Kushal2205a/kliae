@@ -2,6 +2,12 @@ export const NODE_SCHEMA_VERSION = 1;
 export const EDGE_SCHEMA_VERSION = 2;
 export const GRAPH_SCHEMA_VERSION = 3;
 
+// Marks a node as a read only anchor: an auto created reference back to the
+// node whose nested graph it lives in, rendered at the center so the nested
+// concepts have something to connect to. Not renamable, not deletable, not
+// double click navigable, but edges can attach to it like any other node.
+export const ANCHOR_NODE_TYPE = "anchor";
+
 export type RelationshipTypeId =
   | "uses" | "used_by"
   | "depends_on" | "depended_by"
