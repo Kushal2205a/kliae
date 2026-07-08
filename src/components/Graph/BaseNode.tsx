@@ -51,6 +51,15 @@ function BaseNode({ id, data, selected }: NodeProps) {
     return false;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterActive, selectedFilterKeys, childGraphId, relationshipIndex, indexVersion]);
+
+  // The nested-graph chevron shows only when the child graph holds actual
+  // content beyond its auto-generated anchor reference (i.e. it is not just
+  // an empty graph created by an accidental double-click).
+  const hasNestedContent = useMemo(() => {
+    if (!childGraphId || !relationshipIndex) return false;
+    return relationshipIndex.hasContentBeyondAnchor(childGraphId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [childGraphId, relationshipIndex, indexVersion]);
   const { onRenameNode, onAddNodeContent, onUpdateNodeContent, onResizeNode, onDeleteNode } = useGraphCallbacks();
 
   const saveTimeout = useRef<number | null>(null);
@@ -306,7 +315,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
               {label}
             </span>
           )}
-          {childGraphId && (
+          {hasNestedContent && (
             <ChevronRight className="w-4 h-4 flex-shrink-0" style={{ color: "var(--app-muted)" }} />
           )}
           {subtreeHasMatch && (

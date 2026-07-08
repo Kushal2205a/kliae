@@ -1,4 +1,5 @@
 import { getFilterKey } from "../constants/relationships";
+import { ANCHOR_NODE_TYPE } from "../types";
 import type { GraphService } from "./GraphService";
 import type { NodeService } from "./NodeService";
 import type { EdgeService } from "./EdgeService";
@@ -57,6 +58,26 @@ export class RelationshipIndexService {
     const result = new Set<string>();
     this.collectSubtreeTypes(graphId, result, new Set());
     return result;
+  }
+
+  /**
+   * True when the graph rooted at graphId holds anything beyond the
+   * auto-generated anchor node that references its parent. Used to decide
+   * whether a node's nested-graph chevron should be shown: an empty nested
+   * graph (anchor only) should not display the indicator.
+   */
+  hasContentBeyondAnchor(graphId: string): boolean {
+    const graph = this.graphService.getGraph(graphId);
+    if (!graph) return false;
+
+    if (graph.edgeIds.length > 0) return true;
+
+    for (const nodeId of graph.nodeIds) {
+      const node = this.nodeService.getNode(nodeId);
+      if (node && node.type !== ANCHOR_NODE_TYPE) return true;
+    }
+
+    return false;
   }
 
   dispose(): void {
