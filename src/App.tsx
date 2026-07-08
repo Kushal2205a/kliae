@@ -23,6 +23,7 @@ import { useGraphStore } from "./stores/useGraphStore";
 import { useUIStore } from "./stores/useUIStore";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import type { CommandContext, Graph, Node, NodeContentDocument } from "./types";
+import { ANCHOR_NODE_TYPE } from "./types";
 
 import WelcomeScreen from "./components/Welcome/WelcomeScreen";
 import CreateWorkspaceDialog from "./components/Welcome/CreateWorkspaceDialog";
@@ -479,6 +480,41 @@ export default function App() {
   const recents = servicesReady && s ? s.workspaceService.getRecents() : [];
   void recentsVersion; // forces re-evaluation of `recents` when bumped
 
+  // Tracks the previously shown graph's own parentNodeId, i.e. "the node
+  // whose graph I was just looking at". Updated after render (see effect
+  // below), so focusPosition below always reads the value from BEFORE this
+  // navigation, which is exactly what tells us whether we just came from a
+  // child graph.
+  const previousGraphParentNodeIdRef = useRef<string | undefined>(undefined);
+
+  // What GraphCanvas should recenter the viewport on after any navigation:
+  //  - Going up via breadcrumb: we just left a graph whose parentNodeId is
+  //    a real node living inside the graph we're now viewing. Center on
+  //    that actual node, wherever it currently sits, not a fixed point.
+  //  - Going down into a node's nested graph: center on that graph's own
+  //    anchor node, which stands in for the node whose graph this is.
+  const focusPosition = useMemo(() => {
+    if (!s || !currentGraph) return undefined;
+
+    const cameFromNodeId = previousGraphParentNodeIdRef.current;
+    if (cameFromNodeId && currentGraph.nodeIds.includes(cameFromNodeId)) {
+      return currentGraph.views.nodeViews[cameFromNodeId]?.position;
+    }
+
+    const anchorNodeId = currentGraph.nodeIds.find(
+      (nodeId) => s.nodeService.getNode(nodeId)?.type === ANCHOR_NODE_TYPE,
+    );
+    if (anchorNodeId) {
+      return currentGraph.views.nodeViews[anchorNodeId]?.position;
+    }
+
+    return undefined;
+  }, [s, currentGraph]);
+
+  useEffect(() => {
+    previousGraphParentNodeIdRef.current = currentGraph?.parentNodeId;
+  }, [currentGraph]);
+
   const handleDeleteRecent = useCallback((path: string) => {
     if (!s) return;
     s.workspaceService.removeRecent(path);
@@ -568,6 +604,7 @@ export default function App() {
           <GraphCanvas
             ref={graphCanvasRef}
             graph={currentGraph}
+            focusPosition={focusPosition}
             converterService={s.converterService}
             commandHistoryService={s.commandHistoryService}
             workspaceService={s.workspaceService}

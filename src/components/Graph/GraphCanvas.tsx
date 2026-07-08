@@ -227,6 +227,7 @@ export interface GraphCanvasHandle {
 
 interface GraphCanvasInnerProps {
   graph: Graph;
+  focusPosition?: { x: number; y: number };
   converterService: ConverterService;
   commandHistoryService: CommandHistoryService;
   workspaceService: WorkspaceService;
@@ -241,6 +242,7 @@ interface GraphCanvasInnerProps {
 
 const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(function GraphCanvasInner({
   graph,
+  focusPosition,
   converterService,
   commandHistoryService,
   workspaceService,
@@ -265,7 +267,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   const setSelectedNodeIds = useUIStore((s) => s.setSelectedNodeIds);
   const filterActive = useFilterStore((s) => s.active);
   const selectedFilterKeys = useFilterStore((s) => s.selectedKeys);
-  const { screenToFlowPosition, getNodes } = useReactFlow();
+  const { screenToFlowPosition, getNodes, setCenter } = useReactFlow();
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => converterService.toReactFlow(graph),
@@ -528,6 +530,31 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     setNodes(newNodes);
     setEdges(newEdges);
   }, [graph, converterService, setNodes, setEdges]);
+
+  // Track the latest focusPosition without making the recenter effect
+  // below depend on it directly. If it depended on focusPosition directly,
+  // dragging a node around while already inside this graph would keep
+  // yanking the camera back to it; instead we only want to look at it once,
+  // at the moment navigation happens.
+  const focusPositionRef = useRef(focusPosition);
+  focusPositionRef.current = focusPosition;
+
+  // The canvas is reused across graph navigation rather than remounted, so
+  // `fitView` (which only runs on initial mount) never fires again once you
+  // navigate to a different graph. Without this, whatever pan and zoom you
+  // had in the previous graph carries straight over, and the node that
+  // contextually matters here (either this graph's anchor when drilling
+  // down, or the real node you just came from when breadcrumbing back up)
+  // can land far outside the visible viewport. Recenter every time the
+  // active graph changes, but only on actual navigation (graph.id), not on
+  // every in place edit of the current graph.
+  useEffect(() => {
+    const pos = focusPositionRef.current;
+    if (pos) {
+      setCenter(pos.x, pos.y, { zoom: 1, duration: 250 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graph.id, setCenter]);
 
   // Keep the UI store's selectedNodeIds in sync with React Flow's own
   // per-node `selected` flag, so other components (e.g. the selection
