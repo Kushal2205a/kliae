@@ -24,6 +24,9 @@ interface AppShellProps {
   sidebar?: ReactNode;
 }
 
+// Icon size shared by the floating canvas controls, matching the header's scale.
+const ICON = "w-4 h-4";
+
 export default function AppShell({
   workspaceName,
   breadcrumbs,
@@ -69,26 +72,37 @@ export default function AppShell({
         )}
         <main className="flex-1 relative overflow-hidden">
           {children}
-          {onOpenProjectSettings && (
+
+          {/* One grouped floating cluster for canvas level controls, instead of
+              two independently positioned circles that read as unrelated. */}
+          <div
+            className="absolute right-4 top-4 z-40 flex flex-col items-center rounded-full border shadow-xl backdrop-blur overflow-hidden"
+            style={{ background: "var(--app-panel)", borderColor: "var(--app-border)" }}
+          >
+            {onOpenProjectSettings && (
+              <>
+                <button
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center transition-colors hover:bg-[var(--app-hover)]"
+                  style={{ color: "var(--app-muted)" }}
+                  title="Project settings"
+                  onClick={onOpenProjectSettings}
+                >
+                  <Settings className={ICON} />
+                </button>
+                <div className="w-6 h-px" style={{ background: "var(--app-border)" }} />
+              </>
+            )}
             <button
               type="button"
-              className="absolute right-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-full border shadow-xl backdrop-blur transition-all duration-150 hover:scale-105"
-              style={{ background: "var(--app-panel)", borderColor: "var(--app-border)", color: "var(--app-muted)" }}
-              title="Project settings"
-              onClick={onOpenProjectSettings}
+              className="flex h-10 w-10 items-center justify-center transition-colors hover:bg-[var(--app-hover)]"
+              style={{ color: "var(--app-muted)" }}
+              title={contentMode === "edit" ? "Switch to view mode" : "Switch to edit mode"}
+              onClick={toggleContentMode}
             >
-              <Settings className="h-5 w-5" />
+              {contentMode === "edit" ? <Eye className={ICON} /> : <Pencil className={ICON} />}
             </button>
-          )}
-          <button
-            type="button"
-            className="absolute right-4 top-1/2 z-40 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border shadow-xl backdrop-blur transition-all duration-150 hover:scale-105"
-            style={{ background: "var(--app-panel)", borderColor: "var(--app-border)", color: "var(--app-muted)" }}
-            title={contentMode === "edit" ? "Switch to view mode" : "Switch to edit mode"}
-            onClick={toggleContentMode}
-          >
-            {contentMode === "edit" ? <Eye className="h-5 w-5" /> : <Pencil className="h-5 w-5" />}
-          </button>
+          </div>
         </main>
       </div>
     </div>

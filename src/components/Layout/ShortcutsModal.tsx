@@ -56,8 +56,8 @@ export default function ShortcutsModal({ open, onClose }: ShortcutsModalProps) {
       onClick={onClose}
     >
       <div
-        className="w-[420px] max-h-[80vh] overflow-y-auto rounded-xl border shadow-2xl"
-        style={{ background: "var(--app-panel)", borderColor: "var(--app-border)" }}
+        className="w-[420px] max-h-[80vh] overflow-y-auto border shadow-2xl"
+        style={{ background: "var(--app-panel)", borderColor: "var(--app-border)", borderRadius: "var(--radius-card)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -69,7 +69,7 @@ export default function ShortcutsModal({ open, onClose }: ShortcutsModalProps) {
           </span>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--app-hover)] transition-colors"
             style={{ color: "var(--app-muted)" }}
           >
             <X className="w-4 h-4" />
