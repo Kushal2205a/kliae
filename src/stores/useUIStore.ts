@@ -29,6 +29,10 @@ interface UIState {
   selectedCanvasObjectId: string | null;
   drawingState: DrawingState | null;
   selectedNodeIds: string[];
+  pendingEditNodeId: string | null;
+
+  setPendingEditNodeId: (id: string | null) => void;
+  
 
   openRelationshipInspector: (edgeId: string) => void;
   closeRelationshipInspector: () => void;
@@ -58,6 +62,7 @@ export const useUIStore = create<UIState>((set) => ({
   selectedCanvasObjectId: null,
   drawingState: null,
   selectedNodeIds: [],
+  pendingEditNodeId: null,
 
   openRelationshipInspector: (edgeId) =>
     set({ relationshipInspectorOpen: true, selectedEdgeId: edgeId }),
@@ -78,4 +83,5 @@ export const useUIStore = create<UIState>((set) => ({
   setSelectedCanvasObjectId: (id) => set({ selectedCanvasObjectId: id }),
   setDrawingState: (state) => set({ drawingState: state }),
   setSelectedNodeIds: (ids) => set({ selectedNodeIds: ids }),
+  setPendingEditNodeId: (id) => set({ pendingEditNodeId: id }),
 }));

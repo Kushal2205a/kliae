@@ -433,8 +433,14 @@ export default function App() {
     const position = graphCanvasRef.current?.getSpawnPosition();
     const cmd = new CreateNodeCommand(graphId, "New Concept", position);
     await s.commandHistoryService.execute(cmd);
+    if (cmd.createdNodeId) {
+      console.log("[create-node] setting pendingEditNodeId:", cmd.createdNodeId);
+      uiStore.setPendingEditNodeId(cmd.createdNodeId);
+    } else {
+      console.log("[create-node] cmd.createdNodeId was falsy!");
+    }
     refreshGraph();
-  }, [refreshGraph]);
+  }, [refreshGraph, uiStore]);
 
   const shortcuts = useMemo(
     () => ({

@@ -10,6 +10,11 @@ export class CreateNodeCommand implements Command {
   private nodeLabel: string;
   private position?: { x: number; y: number };
 
+  /** The id of the node once created, so callers can act on it after execute() resolves. */
+  get createdNodeId(): string | undefined {
+    return this.nodeId;
+  }
+
   constructor(graphId: string, nodeLabel: string, position?: { x: number; y: number }) {
     this.graphId = graphId;
     this.nodeLabel = nodeLabel;

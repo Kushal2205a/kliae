@@ -264,6 +264,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   const setCurrentTool = useUIStore((s) => s.setCurrentTool);
   const setDrawingState = useUIStore((s) => s.setDrawingState);
   const selectedNodeIds = useUIStore((s) => s.selectedNodeIds);
+  const pendingEditNodeId = useUIStore((s) => s.pendingEditNodeId);
   const setSelectedNodeIds = useUIStore((s) => s.setSelectedNodeIds);
   const filterActive = useFilterStore((s) => s.active);
   const selectedFilterKeys = useFilterStore((s) => s.selectedKeys);
@@ -530,6 +531,22 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     setNodes(newNodes);
     setEdges(newEdges);
   }, [graph, converterService, setNodes, setEdges]);
+
+  // A node that just got created (and is about to auto-enter rename mode)
+  // never went through React Flow's own click-to-select path, so it lacks
+  // the `selected` flag that normally comes bundled with clicking a node.
+  // Mirror that here: select it, and deselect anything else, exactly like
+  // a manual click would.
+  useEffect(() => {
+    if (!pendingEditNodeId) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === pendingEditNodeId
+          ? (n.selected ? n : { ...n, selected: true })
+          : (n.selected ? { ...n, selected: false } : n),
+      ),
+    );
+  }, [pendingEditNodeId, setNodes]);
 
   // Track the latest focusPosition without making the recenter effect
   // below depend on it directly. If it depended on focusPosition directly,
@@ -1167,6 +1184,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
           minZoom={0.1}
           maxZoom={4}
           multiSelectionKeyCode={["Shift", "Meta", "Control"]}
+          nodesFocusable={false}
           selectionKeyCode="Shift"
           selectionOnDrag={currentTool === "select"}
           panOnDrag={true}

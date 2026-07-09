@@ -1,4 +1,4 @@
-import { memo, useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { memo, useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Handle, NodeResizer, Position, type NodeProps } from "@xyflow/react";
 import { ChevronRight, X } from "lucide-react";
@@ -33,6 +33,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
   const nodeContent = content as NodeContentDocument | undefined;
   const hasContent = !!nodeContent;
   const contentEditing = useUIStore((s) => s.contentMode === "edit");
+  const pendingEditNodeId = useUIStore((s) => s.pendingEditNodeId);
   const filterActive = useFilterStore((s) => s.active);
   const selectedFilterKeys = useFilterStore((s) => s.selectedKeys);
   const indexVersion = useFilterStore((s) => s.indexVersion); // cache-buster: bumped by RelationshipIndexService on every mutation
@@ -121,10 +122,10 @@ function BaseNode({ id, data, selected }: NodeProps) {
 
   // ── title editing ──────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+  useLayoutEffect(() => {
+    if (editing) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
     }
   }, [editing]);
 
@@ -133,6 +134,18 @@ function BaseNode({ id, data, selected }: NodeProps) {
     setEditValue(label);
     setEditing(true);
   }, [label]);
+
+  // Newly created nodes drop straight into edit mode so the user can just
+  // type the name instead of clicking in to rename. The store flag is
+  // consumed (cleared) here so it only fires once, for this node.
+  useEffect(() => {
+    if (pendingEditNodeId === id) {
+      setEditValue(label);
+      setEditing(true);
+      useUIStore.getState().setPendingEditNodeId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingEditNodeId, id]);
 
   const commitEdit = useCallback(() => {
     const trimmed = editValue.trim();
