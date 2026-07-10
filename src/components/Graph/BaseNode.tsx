@@ -123,10 +123,22 @@ function BaseNode({ id, data, selected }: NodeProps) {
   // ── title editing ──────────────────────────────────────────────────────────
 
   useLayoutEffect(() => {
-    if (editing) {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
+    if (!editing) return;
+    let attempts = 0;
+    let raf: number;
+    const tryFocus = () => {
+      const el = inputRef.current;
+      if (el && document.activeElement !== el) {
+        el.focus();
+        el.select();
+      }
+      attempts++;
+      if (attempts < 30 && inputRef.current && document.activeElement !== inputRef.current) {
+        raf = requestAnimationFrame(tryFocus);
+      }
+    };
+    tryFocus();
+    return () => cancelAnimationFrame(raf);
   }, [editing]);
 
   const startEditing = useCallback((e: React.MouseEvent) => {
