@@ -59,7 +59,7 @@ export default function WelcomeScreen({
             <span className="font-bold">∈</span>
           </h1>
           <p className="text-sm" style={{ color: "var(--app-muted)" }}>
-            A graph-first learning environment
+            A graph based learning environment
           </p>
         </div>
 
