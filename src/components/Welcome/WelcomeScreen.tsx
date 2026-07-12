@@ -135,6 +135,13 @@ export default function WelcomeScreen({
           </div>
         )}
       </div>
+
+      <footer
+        className="absolute bottom-6 left-0 right-0 flex items-center justify-center text-xs"
+        style={{ color: "var(--app-muted)" }}
+      >
+        <span>Klia∈ v0.1.8</span>
+      </footer>
     </div>
   );
 }
