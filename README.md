@@ -5,7 +5,7 @@
 <h1 align="center">Kliae</h1>
 
 <p align="center">
-  A graph-first learning environment
+  A graph based learning environment
 </p>
 
 <p align="center">
