@@ -860,6 +860,13 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   );
 
   // --- Node drag handling ---
+  // Throttle position updates during drag: React Flow moves nodes via CSS
+  // transforms internally, so we don't need to update our state on every
+  // frame. Throttling reduces edgesWithOrigins recalculation from ~60fps
+  // to ~30fps, cutting the main CPU bottleneck during drag.
+  const pendingPosChangesRef = useRef<any[]>([]);
+  const dragRafRef = useRef(0);
+
   const onNodesChangeWrapper = useCallback(
     (changes: any) => {
       for (const change of changes) {
@@ -893,10 +900,50 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
           })();
         }
       }
-      onNodesChange(changes);
+
+      // Split into position vs non-position changes.
+      // Non-position changes (selection, remove, dimensions) apply immediately.
+      const posChanges: any[] = [];
+      const otherChanges: any[] = [];
+      for (const c of changes) {
+        (c.type === "position" ? posChanges : otherChanges).push(c);
+      }
+      if (otherChanges.length > 0) onNodesChange(otherChanges);
+
+      if (posChanges.length > 0) {
+        // During active drag, throttle position state updates via rAF.
+        // React Flow applies CSS transforms instantly — the visual drag is
+        // smooth regardless. We just delay the state sync to ~30fps so the
+        // expensive downstream memos (edge bundling, displayNodes) run less
+        // often. On drag-end (dragging===false) we always apply immediately.
+        const isDragUpdate = posChanges.some((c: any) => c.dragging === true);
+        if (isDragUpdate) {
+          pendingPosChangesRef.current = posChanges;
+          if (!dragRafRef.current) {
+            dragRafRef.current = requestAnimationFrame(() => {
+              onNodesChange(pendingPosChangesRef.current);
+              dragRafRef.current = 0;
+            });
+          }
+        } else {
+          // Drag ended or non-drag position change: apply immediately
+          if (dragRafRef.current) {
+            cancelAnimationFrame(dragRafRef.current);
+            dragRafRef.current = 0;
+          }
+          onNodesChange(posChanges);
+        }
+      }
     },
     [graph.id, graph.canvas.objects, nodes, commandHistoryService, onNodesChange],
   );
+
+  // Cleanup throttled rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (dragRafRef.current) cancelAnimationFrame(dragRafRef.current);
+    };
+  }, []);
 
   // --- Edge handling ---
   const onEdgesChangeWrapper = useCallback(
