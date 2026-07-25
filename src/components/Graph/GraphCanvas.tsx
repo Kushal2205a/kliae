@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -95,42 +95,25 @@ function readFileAsDataURL(file: File): Promise<string> {
 
 
 /**
- * Structural fingerprint of a graph — catches node/edge additions, removals,
- * label edits, relationship changes, and position updates. When the
- * fingerprint is identical between renders, the full toReactFlow() conversion
- * can be skipped (positions are already correct in React Flow state).
+ * Structural fingerprint — catches node/edge additions, removals, label edits,
+ * and relationship changes. Position-only changes are NOT included because
+ * MoveNodeCommand mutates NodeView in-place, so the graph already has correct
+ * positions when the useEffect fires.
  */
 function computeGraphFingerprint(graph: Graph, converter: ConverterService): string {
-  const parts: string[] = [graph.id];
+  const nodeService = converter["nodeService"];
+  const edgeService = converter["edgeService"];
+  const parts: string[] = [graph.id, String(graph.nodeIds.length), String(graph.edgeIds.length)];
   for (const nodeId of graph.nodeIds) {
-    const node = converter["nodeService"].getNode(nodeId);
-    const view = graph.views.nodeViews[nodeId];
-    parts.push(
-      `${nodeId}:${node?.label ?? ""}:${view?.position.x ?? 0}:${view?.position.y ?? 0}:${view?.width ?? ""}:${view?.height ?? ""}:${node?.childGraphId ?? ""}`,
-    );
+    const node = nodeService.getNode(nodeId);
+    parts.push(`${nodeId}:${node?.label ?? ""}`);
   }
   for (const edgeId of graph.edgeIds) {
-    const edge = converter["edgeService"].getEdge(edgeId);
-    if (edge) {
-      parts.push(`${edgeId}:${edge.sourceId}->${edge.targetId}:${edge.relationship.id}:${edge.relationship.customLabel ?? ""}`);
-    }
+    const edge = edgeService.getEdge(edgeId);
+    if (edge) parts.push(`${edgeId}:${edge.sourceId}->${edge.targetId}:${edge.relationship.id}`);
   }
   return parts.join("|");
 }
-
-const miniMapStyle = { backgroundColor: "var(--app-surface)" } as const;
-const MemoizedMiniMap = memo(function MemoizedMiniMap() {
-  return (
-    <MiniMap
-      pannable
-      zoomable
-      style={miniMapStyle}
-      nodeColor="var(--app-accent)"
-      maskColor="rgba(0,0,0,0.35)"
-      nodeStrokeWidth={0}
-    />
-  );
-});
 
 const defaultEdgeOptions = { type: "custom-edge", animated: false } as const;
 
@@ -1293,7 +1276,14 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
         >
           <Background color="var(--app-grid)" gap={18} size={1.4} />
           <Controls />
-          <MemoizedMiniMap />
+          <MiniMap
+            pannable
+            zoomable
+            style={{ backgroundColor: "var(--app-surface)" }}
+            nodeColor="var(--app-accent)"
+            maskColor="rgba(0,0,0,0.35)"
+            nodeStrokeWidth={0}
+          />
         </ReactFlow>
       </GraphCallbacksProvider>
       <CanvasOverlay
