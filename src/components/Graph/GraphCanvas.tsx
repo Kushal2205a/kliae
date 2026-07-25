@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
+import { memo, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -93,6 +93,46 @@ function readFileAsDataURL(file: File): Promise<string> {
   });
 }
 
+
+/**
+ * Structural fingerprint of a graph — catches node/edge additions, removals,
+ * label edits, relationship changes, and position updates. When the
+ * fingerprint is identical between renders, the full toReactFlow() conversion
+ * can be skipped (positions are already correct in React Flow state).
+ */
+function computeGraphFingerprint(graph: Graph, converter: ConverterService): string {
+  const parts: string[] = [graph.id];
+  for (const nodeId of graph.nodeIds) {
+    const node = converter["nodeService"].getNode(nodeId);
+    const view = graph.views.nodeViews[nodeId];
+    parts.push(
+      `${nodeId}:${node?.label ?? ""}:${view?.position.x ?? 0}:${view?.position.y ?? 0}:${view?.width ?? ""}:${view?.height ?? ""}:${node?.childGraphId ?? ""}`,
+    );
+  }
+  for (const edgeId of graph.edgeIds) {
+    const edge = converter["edgeService"].getEdge(edgeId);
+    if (edge) {
+      parts.push(`${edgeId}:${edge.sourceId}->${edge.targetId}:${edge.relationship.id}:${edge.relationship.customLabel ?? ""}`);
+    }
+  }
+  return parts.join("|");
+}
+
+const miniMapStyle = { backgroundColor: "var(--app-surface)" } as const;
+const MemoizedMiniMap = memo(function MemoizedMiniMap() {
+  return (
+    <MiniMap
+      pannable
+      zoomable
+      style={miniMapStyle}
+      nodeColor="var(--app-accent)"
+      maskColor="rgba(0,0,0,0.35)"
+      nodeStrokeWidth={0}
+    />
+  );
+});
+
+const defaultEdgeOptions = { type: "custom-edge", animated: false } as const;
 
 const SPAWN_VIEWPORT_TRIES = 20;
 const SPAWN_EXPANSION_ROUNDS = 3;
@@ -223,6 +263,8 @@ export interface GraphCanvasHandle {
   pasteClipboard: () => void;
   /** Deletes all currently-selected nodes (and their edges) as one undoable step. No-op if nothing is selected. */
   deleteSelectedNodes: () => void;
+  /** Deletes all currently-selected edges as one undoable step. No-op if nothing is selected. */
+  deleteSelectedEdges: () => void;
 }
 
 interface GraphCanvasInnerProps {
@@ -398,6 +440,19 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     })();
   }, [commandHistoryService, graph.id, getNodes, onGraphChanged]);
 
+  const deleteSelectedEdges = useCallback(() => {
+    const edgeIds = edges
+      .filter((e: any) => e.selected && e.data?.edgeId)
+      .map((e: any) => e.data.edgeId as string);
+    if (edgeIds.length === 0) return;
+    void (async () => {
+      for (const edgeId of edgeIds) {
+        await commandHistoryService.execute(new DeleteEdgeCommand(graph.id, edgeId));
+      }
+      onGraphChanged();
+    })();
+  }, [commandHistoryService, graph.id, edges, onGraphChanged]);
+
   const createImageNodeFromFile = useCallback(
     async (file: File, position: { x: number; y: number }) => {
       if (!file.type.startsWith("image/")) return;
@@ -508,7 +563,8 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     copySelectedNodes,
     pasteClipboard,
     deleteSelectedNodes,
-  }), [screenToFlowPosition, getNodes, copySelectedNodes, pasteClipboard, deleteSelectedNodes]);
+    deleteSelectedEdges,
+  }), [screenToFlowPosition, getNodes, copySelectedNodes, pasteClipboard, deleteSelectedNodes, deleteSelectedEdges]);
 
 
   // --- Zip state: stores each bundle's current zip-point ratio (0–1) ---
@@ -526,7 +582,14 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     });
   }, []);
 
+  // Structural fingerprint — skips the expensive toReactFlow() conversion
+  // when only positions changed (e.g. node drag). Positions are already
+  // correct in React Flow's internal state via onNodesChange.
+  const fingerprintRef = useRef<string>("");
   useEffect(() => {
+    const fp = computeGraphFingerprint(graph, converterService);
+    if (fp === fingerprintRef.current) return;
+    fingerprintRef.current = fp;
     const { nodes: newNodes, edges: newEdges } = converterService.toReactFlow(graph);
     setNodes(newNodes);
     setEdges(newEdges);
@@ -576,12 +639,15 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   // Keep the UI store's selectedNodeIds in sync with React Flow's own
   // per-node `selected` flag, so other components (e.g. the selection
   // toolbar) can react to selection without reaching into ReactFlow state.
+  // Uses a ref to avoid re-running on every nodes position update (drag).
+  const prevSelectedIdsRef = useRef<string[]>([]);
   useEffect(() => {
     const ids = nodes.filter((n: any) => n.selected).map((n: any) => n.id);
-    const prev = selectedNodeIds;
-    const changed = ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
-    if (changed) setSelectedNodeIds(ids);
-  }, [nodes, selectedNodeIds, setSelectedNodeIds]);
+    const prev = prevSelectedIdsRef.current;
+    if (ids.length === prev.length && ids.every((id, i) => id === prev[i])) return;
+    prevSelectedIdsRef.current = ids;
+    setSelectedNodeIds(ids);
+  }, [nodes, setSelectedNodeIds]);
 
 
 
@@ -590,22 +656,6 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   // raw `edges` would compute zip-points using edges that are about to be
   // hidden, producing wrong geometry for whatever actually remains.
   const filteredEdges = useMemo(() => {
-    console.log({
-      filterActive,
-      selectedFilterKeys: [...selectedFilterKeys],
-      edgeTypes: edges
-        .filter((e) => e.data?.relationshipType)
-        .map((e) => ({
-          relationship: e.data!.relationshipType,
-          custom: e.data?.customLabel,
-          key: getFilterKey({
-            id: e.data!.relationshipType,
-            customLabel: e.data?.customLabel,
-          }),
-        })),
-    });
-
-
     if (!filterActive || selectedFilterKeys.size === 0) return edges;
     return (edges as any[]).filter((edge) =>
       selectedFilterKeys.has(
@@ -660,11 +710,15 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
     };
     const bundleDataMap = new Map<string, BundleData>();
 
+    // Pre-build node lookup map — O(1) instead of O(n) .find() per edge
+    const nodeMap = new Map<string, any>();
+    for (const n of nodes as any[]) nodeMap.set(n.id, n);
+
     // --- Pass 1: build bundle geometry for every leader edge ---
     for (const edge of filteredEdges as any[]) {
       if (!edge.data?.isBundleLeader || !edge.data?.bundleTargetIds?.length) continue;
 
-      const sourceNode = nodes.find((n: any) => n.id === edge.source);
+      const sourceNode = nodeMap.get(edge.source);
       if (!sourceNode) continue;
 
       const { width: sw, height: sh } = getNodeDims(sourceNode);
@@ -675,7 +729,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
       const targetCenters: { x: number; y: number }[] = [];
 
       for (const targetId of edge.data.bundleTargetIds) {
-        const tn = nodes.find((n: any) => n.id === targetId);
+        const tn = nodeMap.get(targetId);
         if (!tn) continue;
         const { width: tw, height: th } = getNodeDims(tn);
         const tx = tn.position.x + tw / 2;
@@ -1188,20 +1242,11 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
           selectionKeyCode="Shift"
           selectionOnDrag={currentTool === "select"}
           panOnDrag={true}
-          defaultEdgeOptions={{
-            type: "custom-edge",
-            animated: false,
-          }}
+          defaultEdgeOptions={defaultEdgeOptions}
         >
           <Background color="var(--app-grid)" gap={18} size={1.4} />
           <Controls />
-          <MiniMap
-            pannable
-            zoomable
-            style={{ backgroundColor: "var(--app-surface)" }}
-            nodeColor="var(--app-accent)"
-            maskColor="rgba(0,0,0,0.35)"
-          />
+          <MemoizedMiniMap />
         </ReactFlow>
       </GraphCallbacksProvider>
       <CanvasOverlay

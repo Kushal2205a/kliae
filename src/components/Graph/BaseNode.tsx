@@ -2,6 +2,7 @@ import { memo, useState, useCallback, useRef, useEffect, useLayoutEffect, useMem
 import { createPortal } from "react-dom";
 import { Handle, NodeResizer, Position, type NodeProps } from "@xyflow/react";
 import { ChevronRight, X } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useGraphCallbacks } from "./GraphCallbacks";
 import { useRelationshipIndex } from "../../constants/RelationshipIndexContext";
 import { useUIStore } from "../../stores/useUIStore";
@@ -32,11 +33,11 @@ function BaseNode({ id, data, selected }: NodeProps) {
   const nodeHeight = typeof height === "number" ? height : undefined;
   const nodeContent = content as NodeContentDocument | undefined;
   const hasContent = !!nodeContent;
-  const contentEditing = useUIStore((s) => s.contentMode === "edit");
-  const pendingEditNodeId = useUIStore((s) => s.pendingEditNodeId);
-  const filterActive = useFilterStore((s) => s.active);
-  const selectedFilterKeys = useFilterStore((s) => s.selectedKeys);
-  const indexVersion = useFilterStore((s) => s.indexVersion); // cache-buster: bumped by RelationshipIndexService on every mutation
+  const contentEditing = useUIStore(useShallow((s) => s.contentMode === "edit"));
+  const pendingEditNodeId = useUIStore(useShallow((s) => s.pendingEditNodeId));
+  const filterActive = useFilterStore(useShallow((s) => s.active));
+  const selectedFilterKeys = useFilterStore(useShallow((s) => s.selectedKeys));
+  const indexVersion = useFilterStore(useShallow((s) => s.indexVersion)); // cache-buster: bumped by RelationshipIndexService on every mutation
   const relationshipIndex = useRelationshipIndex();
 
   // True when this is a collapsed component node whose child graph (or any of
@@ -279,7 +280,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
         className={`
           relative flex h-full w-full flex-col px-4 py-3.5 border
           ${nodeWidth ? "" : imageOnlyContent ? "max-w-none" : "max-w-[320px]"}
-          transition-all duration-150
+          transition-[border-color,box-shadow,opacity] duration-150
         `}
         style={{
           borderColor: selected ? "var(--app-border-focus)" : `${color}55`,
