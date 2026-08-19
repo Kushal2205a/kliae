@@ -1,4 +1,4 @@
-import { Undo2, Redo, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard, Check } from "lucide-react";
+import { Undo2, Redo, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard, Check, ChevronDown } from "lucide-react";
 import Breadcrumbs from "../Navigation/Breadcrumbs";
 import type { Breadcrumb } from "../../types";
 import type { CanvasTool } from "../../stores/useUIStore";
@@ -23,12 +23,14 @@ interface HeaderProps {
   onToolChange?: (tool: CanvasTool) => void;
 }
 
-const tools: { id: CanvasTool; icon: typeof MousePointer2; label: string }[] = [
-  { id: "select", icon: MousePointer2, label: "Select" },
+type ToolDef = { id: CanvasTool; icon: typeof MousePointer2; label: string };
+const selectTool: ToolDef = { id: "select", icon: MousePointer2, label: "Select" };
+const shapeTools: ToolDef[] = [
   { id: "rectangle", icon: Square, label: "Rect" },
   { id: "rounded-rectangle", icon: Squircle, label: "Round" },
   { id: "ellipse", icon: Circle, label: "Ellipse" },
 ];
+const SHAPE_IDS = new Set<CanvasTool>(shapeTools.map((t) => t.id));
 
 // Every icon in this header shares this size. Mixing 14/16/20px icons across
 // one toolbar is the fastest way to make an interface feel unconsidered.
@@ -73,6 +75,34 @@ export default function Header({
   const filterRef = useRef<HTMLDivElement>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
+  const [lastShape, setLastShape] = useState<CanvasTool>("rectangle");
+
+  const selectShape = (tool: CanvasTool) => {
+    setLastShape(tool);
+    onToolChange?.(tool);
+    setShapeMenuOpen(false);
+  };
+  const shapeActive = currentTool !== undefined && SHAPE_IDS.has(currentTool);
+  const ShapeIcon = shapeTools.find((t) => t.id === lastShape)!.icon;
+
+  // Shape submenu: click-to-open / click-outside-to-close, same as the filter
+  // popover below. No hover, no timers — hover-based open/close is what was
+  // closing this menu out from under the cursor before a selection could be
+  // made, so it's removed entirely rather than patched.
+  const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
+  const shapeMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!shapeMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (shapeMenuRef.current && !shapeMenuRef.current.contains(e.target as Node)) {
+        setShapeMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [shapeMenuOpen]);
+
   // Close popover on outside click
   useEffect(() => {
     if (!filterOpen) return;
@@ -98,6 +128,7 @@ export default function Header({
   const allFilterOptions = [...builtinKeys, ...activeCustomKeys];
 
   return (
+    <>
     <header
       className="h-12 border-b flex items-center px-4 gap-3 select-none backdrop-blur-xl relative z-10"
       style={{ background: "var(--app-panel)", borderColor: "var(--app-border)" }}
@@ -123,24 +154,55 @@ export default function Header({
       <div className="flex items-center gap-2 shrink-0">
         {currentTool !== undefined && onToolChange && (
           <ControlGroup>
-            {tools.map((tool) => {
-              const Icon = tool.icon;
-              const active = currentTool === tool.id;
-              return (
-                <button
-                  key={tool.id}
-                  onClick={() => onToolChange(tool.id)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
-                    active ? "bg-[var(--app-active)] shadow-sm" : "hover:bg-[var(--app-hover)]"
-                  }`}
-                  style={{ color: active ? "var(--app-text)" : "var(--app-muted)" }}
-                  title={tool.label}
+            <button
+              onClick={() => onToolChange(selectTool.id)}
+              className={`p-1.5 rounded-lg transition-all duration-150 ${
+                currentTool === selectTool.id ? "bg-[var(--app-active)] shadow-sm" : "hover:bg-[var(--app-hover)]"
+              }`}
+              style={{ color: currentTool === selectTool.id ? "var(--app-text)" : "var(--app-muted)" }}
+              title="Select"
+            >
+              <selectTool.icon className={ICON} />
+            </button>
+
+            <div className="relative" ref={shapeMenuRef}>
+              <button
+                onClick={() => setShapeMenuOpen((v) => !v)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
+                  shapeActive ? "bg-[var(--app-active)] shadow-sm" : "hover:bg-[var(--app-hover)]"
+                }`}
+                style={{ color: shapeActive ? "var(--app-text)" : "var(--app-muted)" }}
+                title="Shape tools"
+              >
+                <ShapeIcon className={ICON} />
+                <ChevronDown className="w-3 h-3 opacity-60" />
+              </button>
+
+              {shapeMenuOpen && (
+                <div
+                  className="absolute left-0 top-full z-50 min-w-[160px] rounded-lg shadow-xl pt-2 pb-1"
+                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
                 >
-                  <Icon className={ICON} />
-                  {tool.label === "Select" ? null : <span>{tool.label}</span>}
-                </button>
-              );
-            })}
+                  {shapeTools.map((tool) => {
+                    const Icon = tool.icon;
+                    const active = currentTool === tool.id;
+                    return (
+                      <button
+                        key={tool.id}
+                        onClick={() => selectShape(tool.id)}
+                        className={`w-full text-left flex items-center gap-2 px-3 py-1.5 text-sm transition-colors ${
+                          active ? "bg-[var(--app-active)]" : "hover:bg-[var(--app-hover)]"
+                        }`}
+                        style={{ color: active ? "var(--app-text)" : "var(--app-muted)" }}
+                      >
+                        <Icon className="w-4 h-4" />
+                        <span>{tool.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </ControlGroup>
         )}
 
@@ -266,7 +328,9 @@ export default function Header({
         </ControlGroup>
       </div>
 
-      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </header>
+
+    <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+    </>
   );
 }
