@@ -458,14 +458,15 @@ export function CanvasOverlay({
 
       {ctxMenu && (
         <div
-          className="fixed z-50 bg-[#1e1e2e] border border-white/10 rounded-lg shadow-xl py-1 min-w-[160px]"
-          style={{ left: ctxMenu.x, top: ctxMenu.y }}
+          className="fixed z-50 min-w-[160px] rounded-lg shadow-xl py-1"
+          style={{ left: ctxMenu.x, top: ctxMenu.y, background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           {menuItems.map((item, i) => (
             <button
               key={i}
-              className="w-full text-left px-3 py-1.5 text-sm text-white/80 hover:bg-white/10 transition-colors"
+              className="w-full text-left px-3 py-1.5 text-sm transition-colors hover:bg-[var(--app-hover)]"
+              style={{ color: "var(--app-text)" }}
               onClick={() => { closeCtxMenu(); item.action(); }}
             >
               {item.label}
