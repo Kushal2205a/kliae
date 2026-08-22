@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
 import {
@@ -21,6 +22,8 @@ import { $isCodeNode, $createCodeNode } from "@lexical/code";
 import { $setBlocksType } from "@lexical/selection";
 import {
     Bold,
+    Check,
+    ChevronDown,
     Code2,
     ImagePlus,
     Italic,
@@ -34,6 +37,24 @@ interface ToolbarPluginProps {
     onAddImage?: () => void;
 }
 
+const CODE_LANGUAGES = [
+    { value: "javascript", label: "JavaScript" },
+    { value: "typescript", label: "TypeScript" },
+    { value: "python", label: "Python" },
+    { value: "rust", label: "Rust" },
+    { value: "go", label: "Go" },
+    { value: "java", label: "Java" },
+    { value: "c", label: "C" },
+    { value: "cpp", label: "C++" },
+    { value: "css", label: "CSS" },
+    { value: "markup", label: "HTML" },
+    { value: "markdown", label: "Markdown" },
+    { value: "sql", label: "SQL" },
+    { value: "swift", label: "Swift" },
+    { value: "objectivec", label: "Objective-C" },
+    { value: "diff", label: "Diff" },
+] as const;
+
 export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
     const [editor] = useLexicalComposerContext();
 
@@ -44,6 +65,76 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
     const [isBulletList, setIsBulletList] = useState(false);
     const [isNumberedList, setIsNumberedList] = useState(false);
     const [isCode, setIsCode] = useState(false);
+    const [codeLanguage, setCodeLanguage] = useState("javascript");
+
+    // Language picker dropdown (custom, portal-rendered so the node's
+    // overflow-hidden padding can't clip it, unlike a native <select>).
+    const [langMenu, setLangMenu] = useState<{
+        left: number;
+        top: number;
+        width: number;
+    } | null>(null);
+    const langBtnRef = useRef<HTMLButtonElement>(null);
+    const langMenuRef = useRef<HTMLDivElement>(null);
+
+    const currentLangLabel =
+        CODE_LANGUAGES.find((l) => l.value === codeLanguage)?.label ?? codeLanguage;
+
+    const openLangMenu = useCallback(() => {
+        const btn = langBtnRef.current;
+        if (!btn) return;
+        const rect = btn.getBoundingClientRect();
+        // Estimate height so the menu flips above the button when it would
+        // otherwise run off the bottom of the window.
+        const estHeight = Math.min(CODE_LANGUAGES.length * 28 + 8, 256);
+        const below = rect.bottom + 4;
+        const fitsBelow = below + estHeight <= window.innerHeight - 8;
+        setLangMenu({
+            left: rect.left,
+            top: fitsBelow ? below : Math.max(8, rect.top - 4 - estHeight),
+            width: rect.width,
+        });
+    }, []);
+
+    const selectLanguage = useCallback(
+        (lang: string) => {
+            setCodeLanguage(lang);
+            setLangMenu(null);
+            editor.update(() => {
+                const selection = $getSelection();
+                if (!$isRangeSelection(selection)) return;
+                const anchorNode = selection.anchor.getNode();
+                const top =
+                    anchorNode.getKey() === "root"
+                        ? anchorNode
+                        : anchorNode.getTopLevelElementOrThrow();
+                if ($isCodeNode(top)) {
+                    top.setLanguage(lang);
+                }
+            });
+        },
+        [editor]
+    );
+
+    // Close the language dropdown on outside click or Escape.
+    useEffect(() => {
+        if (!langMenu) return;
+        const onPointerDown = (e: PointerEvent) => {
+            const target = e.target as Node;
+            if (langMenuRef.current?.contains(target)) return;
+            if (langBtnRef.current?.contains(target)) return;
+            setLangMenu(null);
+        };
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setLangMenu(null);
+        };
+        document.addEventListener("pointerdown", onPointerDown, true);
+        document.addEventListener("keydown", onKeyDown, true);
+        return () => {
+            document.removeEventListener("pointerdown", onPointerDown, true);
+            document.removeEventListener("keydown", onKeyDown, true);
+        };
+    }, [langMenu]);
 
     const $updateToolbar = useCallback(() => {
         const selection = $getSelection();
@@ -75,7 +166,11 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                 setIsBulletList(false);
                 setIsNumberedList(false);
             }
-            setIsCode($isCodeNode(element));
+            const isCode = $isCodeNode(element);
+            setIsCode(isCode);
+            if (isCode) {
+                setCodeLanguage(element.getLanguage() ?? "javascript");
+            }
         }
     }, []);
 
@@ -121,6 +216,41 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
             }
             .toolbar-scroll::-webkit-scrollbar {
                 display: none;
+            }
+            /* Theme-aware language picker. The trigger is a button styled to
+               blend with the toolbar in both dark and light mode; the menu is
+               rendered in a body portal (see LangMenu below) so the node's
+               overflow-hidden padding can never clip or overshadow it. */
+            .toolbar-lang-select {
+                background-color: var(--app-surface);
+                color: var(--app-text);
+                border: 1px solid var(--app-border);
+                border-radius: var(--radius-sm);
+                font-family: inherit;
+                cursor: pointer;
+                transition: border-color 120ms ease, background-color 120ms ease;
+            }
+            .toolbar-lang-select:hover {
+                border-color: var(--app-border-strong);
+                background-color: var(--app-active);
+            }
+            .toolbar-lang-select:focus-visible {
+                outline: none;
+                border-color: var(--app-border-focus);
+            }
+            .toolbar-lang-menu {
+                background-color: var(--app-surface);
+                color: var(--app-text);
+                border: 1px solid var(--app-border);
+                border-radius: var(--radius-sm);
+                box-shadow: var(--shadow-2);
+            }
+            .toolbar-lang-option:hover {
+                background-color: var(--app-hover);
+            }
+            .toolbar-lang-option:focus-visible {
+                outline: 1px solid var(--app-border-focus);
+                outline-offset: -1px;
             }
         `}</style>
         <div
@@ -238,6 +368,82 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
             >
                 <Code2 className="w-3.5 h-3.5" />
             </button>
+
+            {isCode && (
+                <>
+                    <button
+                        ref={langBtnRef}
+                        type="button"
+                        className="toolbar-lang-select flex h-6 flex-shrink-0 items-center gap-1 self-center py-0 pl-1.5 pr-1.5 text-xs"
+                        title="Code block language"
+                        onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (langMenu) setLangMenu(null);
+                            else openLangMenu();
+                        }}
+                    >
+                        <span className="shrink-0 whitespace-nowrap">
+                            {currentLangLabel}
+                        </span>
+                        <ChevronDown
+                            className="h-3 w-3 flex-shrink-0"
+                            style={{ color: "var(--app-muted)" }}
+                            aria-hidden="true"
+                        />
+                    </button>
+
+                    {langMenu &&
+                        createPortal(
+                            <div
+                                ref={langMenuRef}
+                                className="toolbar-lang-menu fixed z-[120] max-h-64 overflow-y-auto py-1"
+                                style={{
+                                    left: langMenu.left,
+                                    top: langMenu.top,
+                                    minWidth: langMenu.width,
+                                }}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {CODE_LANGUAGES.map((lang) => {
+                                    const selected = lang.value === codeLanguage;
+                                    return (
+                                        <button
+                                            key={lang.value}
+                                            type="button"
+                                            className={`toolbar-lang-option flex w-full items-center justify-between gap-4 px-2.5 py-1.5 text-left text-xs transition-colors ${
+                                                selected
+                                                    ? "bg-[var(--app-active)] font-medium text-[var(--app-accent)]"
+                                                    : "text-[var(--app-text-secondary)]"
+                                            }`}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                selectLanguage(lang.value);
+                                            }}
+                                        >
+                                            <span>{lang.label}</span>
+                                            {selected && (
+                                                <Check
+                                                    className="h-3.5 w-3.5 flex-shrink-0"
+                                                    aria-hidden="true"
+                                                />
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>,
+                            document.body
+                        )}
+                </>
+            )}
         </div>
         </>
     );

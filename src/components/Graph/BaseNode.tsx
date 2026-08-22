@@ -87,7 +87,10 @@ function BaseNode({ id, data, selected }: NodeProps) {
   // reach them (the overflow-hidden wrapper hides the scrollable overflow).
   const dynamicMinWidth = useMemo(() => {
     const BASE_MIN_WIDTH = 180;
-    const TOOLBAR_MIN_WIDTH = 300; // enough for all 7 buttons + 3 dividers + padding
+    // Enough for every toolbar control plus the language picker trigger
+    // (which shows the full language label, e.g. "Objective-C") without the
+    // node edge clipping or forcing horizontal scroll.
+    const TOOLBAR_MIN_WIDTH = 400;
     return hasContent && contentEditing
       ? Math.max(BASE_MIN_WIDTH, TOOLBAR_MIN_WIDTH)
       : BASE_MIN_WIDTH;

@@ -1,6 +1,7 @@
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import ToolbarPlugin from "./ToolbarPlugin";
+import CodeEditorPlugin from "./CodeEditorPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
@@ -133,6 +134,7 @@ export default function LexicalEditor({
                 <HistoryPlugin />
                 <ListPlugin />
                 <CodeHighlightPlugin />
+                <CodeEditorPlugin />
                 <AutoFocusPlugin defaultSelection="rootEnd" />
                 <OnChangePlugin
                     onChange={(editorState) => {
