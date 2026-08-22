@@ -18,7 +18,6 @@
   --app-text-secondary: rgba(245, 245, 245, 0.8);
   --app-border-strong: rgba(255, 255, 255, 0.2);
   --app-border-focus: rgba(255, 255, 255, 0.38);
-  --app-hover-brightness: 1.3;
 
   /* Fixed regardless of theme — the syntax palette is tuned for a dark background */
   --code-bg: #1e1e1e;
@@ -58,7 +57,6 @@
   --app-text-secondary: rgba(20, 20, 20, 0.78);
   --app-border-strong: rgba(0, 0, 0, 0.22);
   --app-border-focus: rgba(0, 0, 0, 0.32);
-  --app-hover-brightness: 0.93;
 
   /* Elevation scale — much lighter alpha than dark mode, or shadows look muddy on white */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.05);
@@ -180,11 +178,15 @@ html, body, #root {
 .react-flow__controls button {
   background: var(--app-panel) !important;
   border-bottom: 1px solid var(--app-border) !important;
-  transition: filter 120ms ease;
+  transition: background-color 120ms ease;
 }
 
+/* NOTE: hover feedback intentionally avoids CSS `filter`. Filters promote the
+   node subtree to its own GPU-composited layer, which rasterizes at the wrong
+   resolution under XWayland/fractional scaling (Arch + Hyprland) and visibly
+   blurs text while hovered. Background washes don't force that promotion. */
 .react-flow__controls button:hover {
-  filter: brightness(var(--app-hover-brightness));
+  background-color: var(--app-active) !important;
 }
 
 .react-flow__minimap {
@@ -194,15 +196,13 @@ html, body, #root {
   border-radius: var(--radius-card);
   overflow: hidden;
   box-shadow: var(--shadow-2);
-  opacity: 0.92;
 }
 
+/* Same composited-layer caveat: no `filter` hovers here. A subtle shadow
+   change gives hover feedback without forcing the node onto its own layer
+   (box-shadow paints outside the element and never re-rasterizes content). */
 .react-flow__node {
-  transition: filter 160ms ease, box-shadow 160ms ease;
-}
-
-.react-flow__node:hover {
-  filter: brightness(1.04);
+  transition: box-shadow 160ms ease;
 }
 
 .react-flow__attribution {
