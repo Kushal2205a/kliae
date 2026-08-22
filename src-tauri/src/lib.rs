@@ -61,6 +61,19 @@ fn read_dir(path: String) -> Result<Vec<serde_json::Value>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Route the webview through XWayland on Linux, matching the packaged
+    // AppImage (its linuxdeploy GTK hook exports GDK_BACKEND=x11 for the
+    // same reason): WebKitGTK's native Wayland backend desyncs its input
+    // region from the visual content after interactive window resizes on
+    // wlroots-based compositors (Hyprland, sway) — clicks land on stale
+    // coordinates, leaving dead buttons and glitchy panning until a forced
+    // re-layout. An existing GDK_BACKEND (explicitly set by the user)
+    // takes precedence.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("GDK_BACKEND").is_none() {
+        std::env::set_var("GDK_BACKEND", "x11");
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
