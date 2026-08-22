@@ -112,6 +112,59 @@ html, body, #root {
    font-family:  "Inter", sans-serif;
 }
 
+/* Math equations (KaTeX) — inherit the app text color so formulas match the
+   theme in both dark and light mode, and scroll horizontally when a display
+   equation is wider than the node. */
+.editor-equation,
+.equation-node {
+  color: var(--app-text);
+}
+.equation-host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.equation-host .katex {
+  font-size: 1.05em;
+}
+.equation-host .katex-display {
+  margin: 4px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.equation-host .katex-display > .katex {
+  white-space: normal;
+}
+.equation-edit-button {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  background: var(--app-surface-2);
+  border: 1px solid var(--app-border);
+  color: var(--app-muted);
+  opacity: 0;
+  transition: opacity 120ms ease, color 120ms ease, border-color 120ms ease;
+  z-index: 5;
+}
+.equation-host:hover .equation-edit-button {
+  opacity: 1;
+}
+.equation-edit-button:hover {
+  color: var(--app-text);
+  border-color: var(--app-border-strong);
+}
+.katex-error {
+  color: var(--app-danger-text) !important;
+}
+
 .react-flow__controls button {
   fill: var(--app-muted);
   stroke: var(--app-muted);

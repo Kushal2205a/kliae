@@ -10,6 +10,7 @@ import { AutoFocusPlugin } from "@lexical/react/LexicalAutoFocusPlugin";
 import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode, registerCodeHighlighting } from "@lexical/code";
+import { EquationNode } from "./MathNodes";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect } from "react";
 
@@ -98,6 +99,7 @@ export default function LexicalEditor({
             ListItemNode,
             CodeNode,
             CodeHighlightNode,
+            EquationNode,
         ],
         onError(error: any) {
             throw error;

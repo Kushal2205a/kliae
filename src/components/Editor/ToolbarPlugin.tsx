@@ -29,9 +29,11 @@ import {
     Italic,
     List,
     ListOrdered,
+    Sigma,
     Strikethrough,
     Underline,
 } from "lucide-react";
+import { EquationEditorDialog, insertEquation } from "./MathNodes";
 
 interface ToolbarPluginProps {
     onAddImage?: () => void;
@@ -76,6 +78,13 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
     } | null>(null);
     const langBtnRef = useRef<HTMLButtonElement>(null);
     const langMenuRef = useRef<HTMLDivElement>(null);
+
+    // Equation insert popover (same portal pattern as the language picker so
+    // the node's overflow-hidden wrapper can't clip it either).
+    const [mathAnchor, setMathAnchor] = useState<{ x: number; y: number } | null>(
+        null,
+    );
+    const mathBtnRef = useRef<HTMLButtonElement>(null);
 
     const currentLangLabel =
         CODE_LANGUAGES.find((l) => l.value === codeLanguage)?.label ?? codeLanguage;
@@ -352,6 +361,30 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
             <div className="w-px h-4 bg-current/15 mx-0.5 flex-shrink-0 self-center" />
 
             <button
+                ref={mathBtnRef}
+                type="button"
+                className={`${btn} ${mathAnchor ? active : ""}`}
+                title="Insert equation"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (mathAnchor) {
+                        setMathAnchor(null);
+                        return;
+                    }
+                    const rect = mathBtnRef.current?.getBoundingClientRect();
+                    setMathAnchor(
+                        rect
+                            ? { x: rect.left, y: rect.bottom + 6 }
+                            : { x: 40, y: 40 },
+                    );
+                }}
+            >
+                <Sigma className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="w-px h-4 bg-current/15 mx-0.5 flex-shrink-0 self-center" />
+
+            <button
                 className={`${btn} ${isCode ? active : ""}`}
                 title="Code block"
                 onClick={() =>
@@ -445,6 +478,19 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                 </>
             )}
         </div>
+
+        {mathAnchor && (
+            <EquationEditorDialog
+                initialLatex=""
+                initialInline={false}
+                anchor={mathAnchor}
+                onSave={(latex, inline) => {
+                    insertEquation(editor, latex, inline);
+                    setMathAnchor(null);
+                }}
+                onClose={() => setMathAnchor(null)}
+            />
+        )}
         </>
     );
 }

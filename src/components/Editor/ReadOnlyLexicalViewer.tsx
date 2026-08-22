@@ -4,6 +4,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { $generateHtmlFromNodes } from "@lexical/html";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
+import { EquationNode } from "./MathNodes";
 
 // Shared with LexicalEditor.tsx — consider extracting to lexicalTheme.ts
 const theme = {
@@ -103,7 +104,7 @@ export default function ReadOnlyLexicalViewer({ editorState }: ReadOnlyLexicalVi
     const initialConfig = {
         namespace: "KnowledgeGraphViewer",
         theme,
-        nodes: [ListNode, ListItemNode, CodeNode, CodeHighlightNode],
+        nodes: [ListNode, ListItemNode, CodeNode, CodeHighlightNode, EquationNode],
         editable: false,
         onError(error: Error) {
             console.error("ReadOnlyLexicalViewer error:", error);
