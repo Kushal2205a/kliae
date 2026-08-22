@@ -235,3 +235,11 @@ input[type="color"]::-moz-color-swatch {
   border: none;
   border-radius: 9999px;
 }
+
+/* WebKitGTK rasterizes stroke-based icon SVGs (lucide) slightly heavier at
+   fractional webview zoom — the ~2px strokes get rounded up to device pixels.
+   --icon-stroke-width is set in main.tsx to 2 / devicePixelRatio so the
+   zoomed render matches the original weight exactly. */
+svg.lucide {
+  stroke-width: var(--icon-stroke-width, 2px);
+}

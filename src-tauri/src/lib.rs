@@ -1,6 +1,9 @@
 use std::fs;
 use std::path::PathBuf;
 
+#[cfg(target_os = "linux")]
+use tauri::Manager;
+
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
     fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))
@@ -59,6 +62,53 @@ fn read_dir(path: String) -> Result<Vec<serde_json::Value>, String> {
     Ok(result)
 }
 
+// Under XWayland (GDK_BACKEND=x11) GTK cannot see the compositor's scale
+// factor, so the webview renders at 1x and the UI looks tiny on HiDPI
+// displays. Detect the real scale ourselves: ask Hyprland first, then fall
+// back to Xft.dpi from xrdb.
+#[cfg(target_os = "linux")]
+fn detect_x11_ui_scale() -> f64 {
+    if let Ok(output) = std::process::Command::new("hyprctl")
+        .args(["monitors", "-j"])
+        .output()
+    {
+        if let Ok(monitors) = serde_json::from_slice::<serde_json::Value>(&output.stdout) {
+            if let Some(list) = monitors.as_array() {
+                // Prefer the focused monitor; otherwise use the first sane scale.
+                let mut fallback = None;
+                for m in list {
+                    let scale = m["scale"].as_f64().unwrap_or(1.0);
+                    if scale <= 0.0 {
+                        continue;
+                    }
+                    if m["focused"].as_bool() == Some(true) {
+                        return scale;
+                    }
+                    fallback = fallback.or(Some(scale));
+                }
+                if let Some(scale) = fallback {
+                    return scale;
+                }
+            }
+        }
+    }
+
+    // Non-Hyprland fallback: X resource Xft.dpi (set by many HiDPI setups).
+    if let Ok(output) = std::process::Command::new("xrdb").arg("-query").output() {
+        if let Ok(text) = String::from_utf8(output.stdout) {
+            for line in text.lines() {
+                if let Some(rest) = line.strip_prefix("Xft.dpi:") {
+                    if let Ok(dpi) = rest.trim().parse::<f64>() {
+                        return dpi / 96.0;
+                    }
+                }
+            }
+        }
+    }
+
+    1.0
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Route the webview through XWayland on Linux, matching the packaged
@@ -90,6 +140,22 @@ pub fn run() {
             {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
+            }
+
+            // Compensate for XWayland ignoring the compositor's scale factor
+            // by zooming the webview to match. Native Wayland sessions already
+            // report the correct scale, so this is x11-only.
+            #[cfg(target_os = "linux")]
+            if std::env::var_os("GDK_BACKEND")
+                .map(|v| v == "x11")
+                .unwrap_or(false)
+            {
+                let scale = detect_x11_ui_scale();
+                if scale > 1.0 {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.set_zoom(scale);
+                    }
+                }
             }
 
             Ok(())
