@@ -14,7 +14,8 @@ import "@xyflow/react/dist/style.css";
 import ConceptNode from "./ConceptNode";
 import AnchorNode from "./AnchorNode";
 import CustomEdge from "./CustomEdge";
-import { BUILTIN_RELATIONSHIPS, getFilterKey, getRelationshipMarkerKey } from "../../constants/relationships";
+import { getEffectiveBuiltinRelationships, getFilterKey, getRelationshipMarkerKey } from "../../constants/relationships";
+import { getDefaultRelationshipColorOverrides } from "../../services/appSettings";
 import { useUIStore } from "../../stores/useUIStore";
 import { useFilterStore } from "../../stores/useFilterStore";
 import { GraphCallbacksProvider } from "./GraphCallbacks";
@@ -96,13 +97,20 @@ function readFileAsDataURL(file: File): Promise<string> {
 
 /**
  * Structural fingerprint — catches node/edge additions, removals, label edits,
- * and relationship changes. Position-only changes are NOT included because
- * MoveNodeCommand mutates NodeView in-place, so the graph already has correct
- * positions when the useEffect fires.
+ * and relationship changes (including custom labels). Position-only changes
+ * are NOT included because MoveNodeCommand mutates NodeView in-place, so the
+ * graph already has correct positions when the useEffect fires.
+ *
+ * Relationship COLORS are also part of the fingerprint: toReactFlow() bakes
+ * them into edge strokes, label chips and marker fills, and a recolor (via
+ * Project Settings or app-wide default overrides) changes neither the graph's
+ * structure nor anything else tracked here. Without them the early-return
+ * below would keep stale colors on screen until some structural edit happened.
  */
 function computeGraphFingerprint(graph: Graph, converter: ConverterService): string {
   const nodeService = converter["nodeService"];
   const edgeService = converter["edgeService"];
+  const workspaceService = converter["workspaceService"];
   const parts: string[] = [graph.id, String(graph.nodeIds.length), String(graph.edgeIds.length)];
   for (const nodeId of graph.nodeIds) {
     const node = nodeService.getNode(nodeId);
@@ -110,8 +118,18 @@ function computeGraphFingerprint(graph: Graph, converter: ConverterService): str
   }
   for (const edgeId of graph.edgeIds) {
     const edge = edgeService.getEdge(edgeId);
-    if (edge) parts.push(`${edgeId}:${edge.sourceId}->${edge.targetId}:${edge.relationship.id}`);
+    // customLabel distinguishes two edges that both have relationship.id
+    // === "custom" — it drives the resolved color, display label and marker.
+    if (edge) {
+      parts.push(
+        `${edgeId}:${edge.sourceId}->${edge.targetId}:${edge.relationship.id}:${edge.relationship.customLabel ?? ""}`,
+      );
+    }
   }
+  const overrides = getDefaultRelationshipColorOverrides();
+  parts.push(Object.entries(overrides).map(([id, c]) => `${id}=${c}`).join(","));
+  const customRels = workspaceService?.getCustomRelationships() ?? [];
+  parts.push(customRels.map((r) => `${r.displayName}=${r.color ?? ""}`).join(","));
   return parts.join("|");
 }
 
@@ -1164,59 +1182,67 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
   );
 
   const customRelationships = workspaceService.getCustomRelationships();
-  // Only recompute the marker defs when the set of custom relationships
-  // actually changes (additive-only, so length is a sufficient signal) —
-  // avoids rebuilding this SVG on every unrelated re-render.
-  const customRelationshipsKey = customRelationships.map((r) => r.displayName).join("|");
+  // Marker identity must include COLORS as well as display names —
+  // recoloring a relationship in Project Settings changes neither the graph
+  // structure nor any name, so without colors in this key the arrowhead
+  // fills would stay stale even after the edges themselves re-render.
+  const markerColorsKey = [
+    ...getEffectiveBuiltinRelationships().map((r) => `${r.id}=${r.color}`),
+    ...customRelationships.map((r) => `custom:${r.displayName}=${r.color ?? ""}`),
+  ].join("|");
 
-  const edgeMarkers = useMemo(() => (
-    <svg aria-hidden="true" style={{ position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}>
-      <defs>
-        {BUILTIN_RELATIONSHIPS.map((rel) => (
-          <marker
-            key={rel.id}
-            id={`edge-arrow-${rel.id}`}
-            viewBox="-10 -10 20 20"
-            refX={EDGE_MARKER_REF_X}
-            refY="0"
-            markerWidth="10"
-            markerHeight="10"
-            markerUnits="strokeWidth"
-            orient="auto"
-          >
-            <polyline
-              points="-5,-4 0,0 -5,4 -5,-4"
-              fill={rel.color}
-              stroke={rel.color}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </marker>
-        ))}
-        {customRelationships.map((rel) => (
-          <marker
-            key={getRelationshipMarkerKey({ id: "custom", customLabel: rel.displayName })}
-            id={`edge-arrow-${getRelationshipMarkerKey({ id: "custom", customLabel: rel.displayName })}`}
-            viewBox="-10 -10 20 20"
-            refX={EDGE_MARKER_REF_X}
-            refY="0"
-            markerWidth="10"
-            markerHeight="10"
-            markerUnits="strokeWidth"
-            orient="auto"
-          >
-            <polyline
-              points="-5,-4 0,0 -5,4 -5,-4"
-              fill={rel.color}
-              stroke={rel.color}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </marker>
-        ))}
-      </defs>
-    </svg>
-  ), [customRelationshipsKey]);
+  const edgeMarkers = useMemo(() => {
+    const builtins = getEffectiveBuiltinRelationships();
+    return (
+      <svg aria-hidden="true" style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
+        <defs>
+          {builtins.map((rel) => (
+            <marker
+              key={rel.id}
+              id={`edge-arrow-${rel.id}`}
+              viewBox="-10 -10 20 20"
+              refX={EDGE_MARKER_REF_X}
+              refY="0"
+              markerWidth="10"
+              markerHeight="10"
+              markerUnits="strokeWidth"
+              orient="auto"
+            >
+              <polyline
+                points="-5,-4 0,0 -5,4 -5,-4"
+                fill={rel.color}
+                stroke={rel.color}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </marker>
+          ))}
+          {customRelationships.map((rel) => (
+            <marker
+              key={getRelationshipMarkerKey({ id: "custom", customLabel: rel.displayName })}
+              id={`edge-arrow-${getRelationshipMarkerKey({ id: "custom", customLabel: rel.displayName })}`}
+              viewBox="-10 -10 20 20"
+              refX={EDGE_MARKER_REF_X}
+              refY="0"
+              markerWidth="10"
+              markerHeight="10"
+              markerUnits="strokeWidth"
+              orient="auto"
+            >
+              <polyline
+                points="-5,-4 0,0 -5,4 -5,-4"
+                fill={rel.color}
+                stroke={rel.color}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </marker>
+          ))}
+        </defs>
+      </svg>
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- customRelationships is covered via markerColorsKey
+  }, [markerColorsKey]);
 
   const hasNodes = graph.nodeIds.length > 0;
   const hasEdges = graph.edgeIds.length > 0;
