@@ -101,6 +101,11 @@ function readFileAsDataURL(file: File): Promise<string> {
  * are NOT included because MoveNodeCommand mutates NodeView in-place, so the
  * graph already has correct positions when the useEffect fires.
  *
+ * Content changes (Add Content, rich text edits, image add/remove) are caught
+ * via each node's `updatedAt`, which NodeService.update() bumps on every
+ * mutation. Without this, content edits persist to disk but the canvas never
+ * rebuilds its flow nodes, so nothing shows up until the workspace reloads.
+ *
  * Relationship COLORS are also part of the fingerprint: toReactFlow() bakes
  * them into edge strokes, label chips and marker fills, and a recolor (via
  * Project Settings or app-wide default overrides) changes neither the graph's
@@ -114,7 +119,7 @@ function computeGraphFingerprint(graph: Graph, converter: ConverterService): str
   const parts: string[] = [graph.id, String(graph.nodeIds.length), String(graph.edgeIds.length)];
   for (const nodeId of graph.nodeIds) {
     const node = nodeService.getNode(nodeId);
-    parts.push(`${nodeId}:${node?.label ?? ""}`);
+    parts.push(`${nodeId}:${node?.label ?? ""}:${node?.updatedAt ?? ""}`);
   }
   for (const edgeId of graph.edgeIds) {
     const edge = edgeService.getEdge(edgeId);
