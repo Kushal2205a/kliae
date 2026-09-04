@@ -19,10 +19,19 @@
   --app-border-strong: rgba(255, 255, 255, 0.2);
   --app-border-focus: rgba(255, 255, 255, 0.38);
 
-  /* Fixed regardless of theme — the syntax palette is tuned for a dark background */
+  /* Syntax palette */
   --code-bg: #1e1e1e;
   --code-border: rgba(255, 255, 255, 0.1);
   --code-text: #abb2bf;
+  --code-comment: #7f848e;
+  --code-keyword: #c678dd;
+  --code-string: #98c379;
+  --code-class: #e5c07b;
+  --code-function: #61afef;
+  --code-number: #d19a66;
+  --code-property: #e06c75;
+  --code-operator: #56b6c2;
+  --code-punctuation: #abb2bf;
 
   /* Shared shape tokens so cards/controls/pills don't drift per-component */
   --radius-sm: 6px;
@@ -57,6 +66,19 @@
   --app-text-secondary: rgba(20, 20, 20, 0.78);
   --app-border-strong: rgba(0, 0, 0, 0.22);
   --app-border-focus: rgba(0, 0, 0, 0.32);
+
+  --code-bg: #f4f4f5;
+  --code-border: rgba(0, 0, 0, 0.12);
+  --code-text: #24292f;
+  --code-comment: #6e7781;
+  --code-keyword: #8250df;
+  --code-string: #116329;
+  --code-class: #953800;
+  --code-function: #0969da;
+  --code-number: #953800;
+  --code-property: #cf222e;
+  --code-operator: #0550ae;
+  --code-punctuation: #24292f;
 
   /* Elevation scale — much lighter alpha than dark mode, or shadows look muddy on white */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.05);
@@ -99,16 +121,23 @@ html, body, #root {
   background: #ffffff25;
 }
 
-/* Code blocks stay a fixed dark theme regardless of app theme, since the
-   One Dark syntax palette below is tuned for a dark background and loses
-   contrast badly on a light one. */
 .editor-code-block {
   background: var(--code-bg) !important;
   border: 1px solid var(--code-border);
   color: var(--code-text);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-   font-family:  "Inter", sans-serif;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
+
+.editor-token-comment { color: var(--code-comment); }
+.editor-token-keyword { color: var(--code-keyword); }
+.editor-token-string { color: var(--code-string); }
+.editor-token-class { color: var(--code-class); }
+.editor-token-function { color: var(--code-function); }
+.editor-token-number { color: var(--code-number); }
+.editor-token-property { color: var(--code-property); }
+.editor-token-operator { color: var(--code-operator); }
+.editor-token-punctuation { color: var(--code-punctuation); }
 
 /* Math equations (KaTeX) — inherit the app text color so formulas match the
    theme in both dark and light mode, and scroll horizontally when a display

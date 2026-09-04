@@ -13,6 +13,7 @@ import { CodeNode, CodeHighlightNode, registerCodeHighlighting } from "@lexical/
 import { EquationNode } from "./MathNodes";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect } from "react";
+import lexicalTheme from "./lexicalTheme";
 
 function CodeHighlightPlugin() {
     const [editor] = useLexicalComposerContext();
@@ -20,57 +21,6 @@ function CodeHighlightPlugin() {
     return null;
 }
 
-const theme = {
-    paragraph: "leading-6",
-    text: {
-        bold: "font-bold",
-        italic: "italic",
-        underline: "underline",
-        strikethrough: "line-through",
-        underlineStrikethrough: "underline line-through",
-    },
-    list: {
-        ul: "list-disc pl-4 ml-1",
-        ol: "list-decimal pl-4 ml-1",
-        listitem: "leading-5",
-        nested: {
-            listitem: "list-none",
-        },
-    },
-    code: "font-mono text-xs rounded p-2 my-1 block overflow-x-auto whitespace-pre editor-code-block",
-    codeHighlight: {
-        comment:        "text-[#5c6370] italic",
-        prolog:         "text-[#5c6370]",
-        doctype:        "text-[#5c6370]",
-        cdata:          "text-[#5c6370]",
-        keyword:        "text-[#c678dd]",
-        atrule:         "text-[#c678dd]",
-        important:      "text-[#c678dd]",
-        regex:          "text-[#c678dd]",
-        selector:       "text-[#98c379]",
-        string:         "text-[#98c379]",
-        char:           "text-[#98c379]",
-        inserted:       "text-[#98c379]",
-        "class-name":   "text-[#e5c07b]",
-        class:          "text-[#e5c07b]",
-        function:       "text-[#61afef]",
-        builtin:        "text-[#61afef]",
-        number:         "text-[#d19a66]",
-        boolean:        "text-[#d19a66]",
-        constant:       "text-[#d19a66]",
-        symbol:         "text-[#d19a66]",
-        deleted:        "text-[#e06c75]",
-        property:       "text-[#e06c75]",
-        tag:            "text-[#e06c75]",
-        namespace:      "text-[#e06c75]",
-        entity:         "text-[#e06c75]",
-        attr:           "text-[#e06c75]",
-        operator:       "text-[#56b6c2]",
-        url:            "text-[#56b6c2]",
-        variable:       "text-[#e06c75]",
-        punctuation:    "text-[#abb2bf]",
-    },
-};
 function Placeholder() {
     return (
         <div className="absolute left-1 top-1 pointer-events-none text-xs opacity-40">
@@ -92,7 +42,7 @@ export default function LexicalEditor({
 }: LexicalEditorProps) {
     const initialConfig = {
         namespace: "KnowledgeGraphEditor",
-        theme,
+        theme: lexicalTheme,
         editorState: initialState || undefined,
         nodes: [
             ListNode,

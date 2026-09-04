@@ -5,59 +5,7 @@ import { $generateHtmlFromNodes } from "@lexical/html";
 import { ListNode, ListItemNode } from "@lexical/list";
 import { CodeNode, CodeHighlightNode } from "@lexical/code";
 import { EquationNode } from "./MathNodes";
-
-// Shared with LexicalEditor.tsx — consider extracting to lexicalTheme.ts
-const theme = {
-    paragraph: "leading-6",
-    text: {
-        bold: "font-bold",
-        italic: "italic",
-        underline: "underline",
-        strikethrough: "line-through",
-        underlineStrikethrough: "underline line-through",
-    },
-    list: {
-        ul: "list-disc pl-4 ml-1",
-        ol: "list-decimal pl-4 ml-1",
-        listitem: "leading-5",
-        nested: {
-            listitem: "list-none",
-        },
-    },
-    code:"font-mono text-xs rounded p-2 my-1 block overflow-x-auto whitespace-pre editor-code-block",
-    codeHighlight: {
-        comment:        "text-[#5c6370] italic",
-        prolog:         "text-[#5c6370]",
-        doctype:        "text-[#5c6370]",
-        cdata:          "text-[#5c6370]",
-        keyword:        "text-[#c678dd]",
-        atrule:         "text-[#c678dd]",
-        important:      "text-[#c678dd]",
-        regex:          "text-[#c678dd]",
-        selector:       "text-[#98c379]",
-        string:         "text-[#98c379]",
-        char:           "text-[#98c379]",
-        inserted:       "text-[#98c379]",
-        "class-name":   "text-[#e5c07b]",
-        class:          "text-[#e5c07b]",
-        function:       "text-[#61afef]",
-        builtin:        "text-[#61afef]",
-        number:         "text-[#d19a66]",
-        boolean:        "text-[#d19a66]",
-        constant:       "text-[#d19a66]",
-        symbol:         "text-[#d19a66]",
-        deleted:        "text-[#e06c75]",
-        property:       "text-[#e06c75]",
-        tag:            "text-[#e06c75]",
-        namespace:      "text-[#e06c75]",
-        entity:         "text-[#e06c75]",
-        attr:           "text-[#e06c75]",
-        operator:       "text-[#56b6c2]",
-        url:            "text-[#56b6c2]",
-        variable:       "text-[#e06c75]",
-        punctuation:    "text-[#abb2bf]",
-    },
-};
+import lexicalTheme from "./lexicalTheme";
 
 /**
  * Converts Lexical editor state into static HTML and renders it as a plain
@@ -103,7 +51,7 @@ interface ReadOnlyLexicalViewerProps {
 export default function ReadOnlyLexicalViewer({ editorState }: ReadOnlyLexicalViewerProps) {
     const initialConfig = {
         namespace: "KnowledgeGraphViewer",
-        theme,
+        theme: lexicalTheme,
         nodes: [ListNode, ListItemNode, CodeNode, CodeHighlightNode, EquationNode],
         editable: false,
         onError(error: Error) {
