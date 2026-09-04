@@ -49,7 +49,6 @@ export default function App() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showProjectSettings, setShowProjectSettings] = useState(false);
-  const [workspaceName, setWorkspaceName] = useState("Knowledge Graph");
   const [currentGraph, setCurrentGraph] = useState<Graph | null>(null);
   const [servicesReady, setServicesReady] = useState(false);
   const [recentsVersion, setRecentsVersion] = useState(0);
@@ -162,7 +161,6 @@ export default function App() {
       await s.workspaceService.save();
       s.navigationService.reset(rootGraph.id);
 
-      setWorkspaceName(name);
       setCurrentGraph(rootGraph);
       navStore.setCurrentGraphId(rootGraph.id);
       navStore.setBreadcrumbs([{ graphId: rootGraph.id, graphName: name }]);
@@ -269,7 +267,6 @@ export default function App() {
         console.error("[open-workspace] step 7 FAILED: no root graph available, will show loading screen");
       }
 
-      setWorkspaceName(manifest.name);
       buildRelationshipIndex();
       setView("workspace");
       setShowOpenDialog(false);
@@ -581,7 +578,6 @@ export default function App() {
     <>
       <UpdateNotifier />
       <AppShell
-        workspaceName={workspaceName}
         breadcrumbs={navStore.breadcrumbs}
         canUndo={s.commandHistoryService.canUndo()}
         canRedo={s.commandHistoryService.canRedo()}

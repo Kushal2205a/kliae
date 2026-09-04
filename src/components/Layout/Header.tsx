@@ -10,7 +10,6 @@ import ShortcutsModal from "./ShortcutsModal";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 
 interface HeaderProps {
-  workspaceName: string;
   breadcrumbs: Breadcrumb[];
   canUndo: boolean;
   canRedo: boolean;
@@ -59,7 +58,6 @@ function ControlGroup({ children }: { children: React.ReactNode }) {
 }
 
 export default function Header({
-  workspaceName,
   breadcrumbs,
   canUndo,
   canRedo,
@@ -144,19 +142,16 @@ export default function Header({
       className="h-12 border-b flex items-center px-4 gap-3 select-none backdrop-blur-xl relative z-10"
       style={{ background: "var(--app-panel)", borderColor: "var(--app-border)" }}
     >
-      <span className="text-sm font-semibold mr-1 truncate max-w-[180px] flex items-center gap-1.5" style={{ color: "var(--app-text)" }}>
-        {onGoHome && (
-          <button
-            onClick={onGoHome}
-            className="p-1.5 rounded-lg hover:bg-[var(--app-hover)] transition-colors"
-            style={{ color: "var(--app-muted)" }}
-            title="Back to Main Menu"
-          >
-            <LogOut className={ICON} />
-          </button>
-        )}
-        {workspaceName}
-      </span>
+      {onGoHome && (
+        <button
+          onClick={onGoHome}
+          className="p-1.5 rounded-lg hover:bg-[var(--app-hover)] transition-colors"
+          style={{ color: "var(--app-muted)" }}
+          title="Back to Main Menu"
+        >
+          <LogOut className={ICON} />
+        </button>
+      )}
 
       <div className="flex-1 flex items-center min-w-0">
         <Breadcrumbs breadcrumbs={breadcrumbs} onNavigate={onNavigateBreadcrumb} />

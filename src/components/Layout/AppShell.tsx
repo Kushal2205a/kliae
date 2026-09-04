@@ -6,7 +6,6 @@ import type { CanvasTool } from "../../stores/useUIStore";
 import { useUIStore } from "../../stores/useUIStore";
 
 interface AppShellProps {
-  workspaceName: string;
   breadcrumbs: Breadcrumb[];
   canUndo: boolean;
   canRedo: boolean;
@@ -29,7 +28,6 @@ interface AppShellProps {
 const ICON = "w-4 h-4";
 
 export default function AppShell({
-  workspaceName,
   breadcrumbs,
   canUndo,
   canRedo,
@@ -53,7 +51,6 @@ export default function AppShell({
   return (
     <div className="w-full h-full flex flex-col text-white" data-theme={themeMode} style={{ background: "var(--app-bg)", color: "var(--app-text)" }}>
       <Header
-        workspaceName={workspaceName}
         breadcrumbs={breadcrumbs}
         canUndo={canUndo}
         canRedo={canRedo}
