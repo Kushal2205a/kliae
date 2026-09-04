@@ -19,6 +19,7 @@ import {
 } from "lexical";
 import { Pencil, Trash2, X } from "lucide-react";
 import type { JSX } from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 const KATEX_OPTIONS: katex.KatexOptions = {
     throwOnError: false,
@@ -315,6 +316,7 @@ export function EquationEditorDialog({
     const [latex, setLatex] = useState(initialLatex);
     const [inline, setInline] = useState(initialInline);
     const previewRef = useRef<HTMLSpanElement | HTMLDivElement>(null);
+    useEscapeKey(onClose);
 
     useEffect(() => {
         const preview = previewRef.current;
@@ -406,7 +408,11 @@ export function EquationEditorDialog({
                                 onSave(latex.trim(), inline);
                             }
                         }
-                        if (e.key === "Escape") onClose();
+                        if (e.key === "Escape") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onClose();
+                        }
                     }}
                     rows={3}
                     placeholder="e.g. E = mc^2"

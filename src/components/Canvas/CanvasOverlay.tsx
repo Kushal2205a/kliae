@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { useStore, useReactFlow } from "@xyflow/react";
 import type { CanvasTool, DrawingState } from "../../stores/useUIStore";
 import type { CanvasObject, DragOverride } from "../../types";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 const MIN_SIZE = 24;
 const SNAP = 10;
@@ -67,6 +68,12 @@ export function CanvasOverlay({
 
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; objectId: string } | null>(null);
   const closeCtxMenu = useCallback(() => setCtxMenu(null), []);
+  useEscapeKey(closeCtxMenu, !!ctxMenu);
+  useEscapeKey(() => {
+    if (!selectedId) return;
+    dragOverridesRef.current.delete(selectedId);
+    onSelectObject(null);
+  }, !!selectedId);
 
   const isDrawing = currentTool !== "select";
 
@@ -270,18 +277,13 @@ export function CanvasOverlay({
     };
   }, [zoom, dragOverridesRef, onTick, onPreviewMove, onCommitMove, onCommitResize]);
 
-  // --- Delete / Escape keyboard ---
+  // --- Delete keyboard ---
   useEffect(() => {
     if (!selectedId) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         dragOverridesRef.current.delete(selectedId);
         onDeleteObject(selectedId);
-      }
-      if (e.key === "Escape") {
-        setCtxMenu(null);
-        dragOverridesRef.current.delete(selectedId);
-        onSelectObject(null);
       }
     };
     document.addEventListener("keydown", handleKeyDown);

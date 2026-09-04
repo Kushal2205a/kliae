@@ -1,5 +1,6 @@
 import { AlertTriangle, X } from "lucide-react";
 import type { ValidationIssue } from "../../types";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ValidationOverlayProps {
   issues: ValidationIssue[];
@@ -7,6 +8,8 @@ interface ValidationOverlayProps {
 }
 
 export default function ValidationOverlay({ issues, onDismiss }: ValidationOverlayProps) {
+  useEscapeKey(onDismiss, issues.length > 0);
+
   if (issues.length === 0) return null;
 
   const errors = issues.filter((i) => i.severity === "error");

@@ -10,6 +10,7 @@ import type { ImageContentBlock, NodeContentDocument } from "../../types";
 import type { RichTextContentBlock } from "../../types";
 import LexicalEditor from "../../components/Editor/LexicalEditor";
 import ReadOnlyLexicalViewer from "../../components/Editor/ReadOnlyLexicalViewer";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,11 @@ function BaseNode({ id, data, selected }: NodeProps) {
   const [editValue, setEditValue] = useState(label);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
   const [previewImage, setPreviewImage] = useState<ImageContentBlock | null>(null);
+
+  useEscapeKey(() => {
+    if (previewImage) setPreviewImage(null);
+    else setCtxMenu(null);
+  }, !!previewImage || !!ctxMenu);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -175,6 +181,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
       (e.target as HTMLInputElement).blur();
     }
     if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
       setEditValue(label);
       setEditing(false);
     }

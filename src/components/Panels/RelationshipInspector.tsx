@@ -9,6 +9,7 @@ import { UpdateEdgeCommand } from "../../commands/UpdateEdgeCommand";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
 import { resolveRelationshipLabel, getEffectiveBuiltinRelationships, getEffectiveRelationshipDefinition } from "../../constants/relationships";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface RelationshipInspectorProps {
   edgeId: string;
@@ -44,6 +45,9 @@ export default function RelationshipInspector({
   const [description, setDescription] = useState(edge?.description ?? "");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEscapeKey(onClose);
+  useEscapeKey(() => setDropdownOpen(false), dropdownOpen);
 
   useEffect(() => {
     if (edge) {

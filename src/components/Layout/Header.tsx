@@ -8,6 +8,7 @@ import { getEffectiveBuiltinRelationships } from "../../constants/relationships"
 import { useState, useRef, useEffect } from "react";
 import ShortcutsModal from "./ShortcutsModal";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface HeaderProps {
   breadcrumbs: Breadcrumb[];
@@ -98,6 +99,11 @@ export default function Header({
   // made, so it's removed entirely rather than patched.
   const [shapeMenuOpen, setShapeMenuOpen] = useState(false);
   const shapeMenuRef = useRef<HTMLDivElement>(null);
+
+  useEscapeKey(() => {
+    setShapeMenuOpen(false);
+    setFilterOpen(false);
+  }, shapeMenuOpen || filterOpen);
 
   useEffect(() => {
     if (!shapeMenuOpen) return;

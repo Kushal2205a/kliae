@@ -34,6 +34,7 @@ import {
     Underline,
 } from "lucide-react";
 import { EquationEditorDialog, insertEquation } from "./MathNodes";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ToolbarPluginProps {
     onAddImage?: () => void;
@@ -85,6 +86,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
         null,
     );
     const mathBtnRef = useRef<HTMLButtonElement>(null);
+    useEscapeKey(() => setLangMenu(null), !!langMenu);
 
     const currentLangLabel =
         CODE_LANGUAGES.find((l) => l.value === codeLanguage)?.label ?? codeLanguage;
@@ -125,7 +127,8 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
         [editor]
     );
 
-    // Close the language dropdown on outside click or Escape.
+    // Close the language dropdown on outside click. Escape is handled by the
+    // shared dismissible-surface stack.
     useEffect(() => {
         if (!langMenu) return;
         const onPointerDown = (e: PointerEvent) => {
@@ -134,14 +137,9 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
             if (langBtnRef.current?.contains(target)) return;
             setLangMenu(null);
         };
-        const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") setLangMenu(null);
-        };
         document.addEventListener("pointerdown", onPointerDown, true);
-        document.addEventListener("keydown", onKeyDown, true);
         return () => {
             document.removeEventListener("pointerdown", onPointerDown, true);
-            document.removeEventListener("keydown", onKeyDown, true);
         };
     }, [langMenu]);
 

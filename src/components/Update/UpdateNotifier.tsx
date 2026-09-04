@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, RotateCw, X } from "lucide-react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 // Module-level guard: this component can mount/unmount as the app switches
 // between the welcome screen, loading state, and workspace view, but we only
@@ -17,6 +18,7 @@ type NotifierState =
 export default function UpdateNotifier() {
   const [state, setState] = useState<NotifierState>({ phase: "idle" });
   const updateRef = useRef<Update | null>(null);
+  useEscapeKey(() => setState({ phase: "dismissed" }), state.phase === "ready");
 
   useEffect(() => {
     if (hasCheckedThisSession) return;
