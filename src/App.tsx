@@ -594,6 +594,7 @@ export default function App() {
         currentTool={uiStore.currentTool}
         onToolChange={(tool: CanvasTool) => uiStore.setCurrentTool(tool)}
         onOpenProjectSettings={() => setShowProjectSettings(true)}
+        customRelationships={s.workspaceService.getCustomRelationships()}
         sidebar={
           uiStore.relationshipInspectorOpen && uiStore.selectedEdgeId ? (
             <RelationshipInspector

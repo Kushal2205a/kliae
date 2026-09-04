@@ -65,15 +65,19 @@ export default function CommandPalette({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/60">
-      <div className="bg-[#1e1e2e] border border-white/10 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
-        <div className="p-3 border-b border-white/5">
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-xl border shadow-2xl"
+        style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}
+      >
+        <div className="p-3 border-b" style={{ borderColor: "var(--app-border)" }}>
           <input
             ref={inputRef}
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-white text-sm placeholder-white/30 focus:outline-none"
+            className="w-full bg-transparent text-sm focus:outline-none placeholder:text-[var(--app-muted)]"
+            style={{ color: "var(--app-text)" }}
             placeholder="Type a command..."
           />
         </div>
@@ -95,20 +99,20 @@ export default function CommandPalette({
                   w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors
                   ${
                     index === selectedIndex
-                      ? "bg-blue-500/10 text-white"
-                      : "text-white/60 hover:text-white/80 hover:bg-white/5"
+                      ? "bg-[var(--app-active)] text-[var(--app-text)]"
+                      : "text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-text)]"
                   }
                 `}
               >
                 <span className="flex-1">{cmd.label}</span>
                 {cmd.shortcut && (
-                  <span className="text-xs text-white/30 font-mono">{cmd.shortcut}</span>
+                  <span className="text-xs font-mono" style={{ color: "var(--app-muted)" }}>{cmd.shortcut}</span>
                 )}
               </button>
             ))
           )}
         </div>
-        <div className="p-2 border-t border-white/5 text-xs text-white/30 px-4 py-2">
+        <div className="border-t px-4 py-2 text-xs" style={{ borderColor: "var(--app-border)", color: "var(--app-muted)" }}>
           ↑↓ Navigate &middot; Enter Select &middot; Esc Close
         </div>
       </div>

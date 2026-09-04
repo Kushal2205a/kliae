@@ -219,7 +219,7 @@ function EquationNodeRenderer({
         const rect = hostRef.current?.getBoundingClientRect();
         setAnchor(
             rect
-                ? { x: rect.left, y: rect.top }
+                ? { x: rect.left, y: rect.bottom + 4 }
                 : { x: window.innerWidth / 2, y: window.innerHeight / 3 },
         );
         setEditorOpen(true);
@@ -330,7 +330,7 @@ export function EquationEditorDialog({
     }, [latex, inline]);
 
     const left = anchor ? Math.max(8, anchor.x) : undefined;
-    const top = anchor ? anchor.y + 16 : undefined;
+    const top = anchor?.y;
 
     return createPortal(
         <div
@@ -342,11 +342,11 @@ export function EquationEditorDialog({
             }}
         >
             <div
-                className="w-[340px] rounded-lg border p-3"
+                className="w-[340px] rounded-xl border p-3"
                 style={{
                     background: "var(--app-surface-2)",
                     borderColor: "var(--app-border)",
-                    boxShadow: "var(--shadow-3)",
+                    boxShadow: "var(--shadow-2)",
                 }}
             >
                 <div className="mb-2 flex items-center justify-between">

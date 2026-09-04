@@ -52,17 +52,17 @@ export default function ShortcutsModal({ open, onClose }: ShortcutsModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60"
       onClick={onClose}
     >
       <div
         className="w-[420px] max-h-[80vh] overflow-y-auto border shadow-2xl"
-        style={{ background: "var(--app-panel)", borderColor: "var(--app-border)", borderRadius: "var(--radius-card)" }}
+        style={{ background: "var(--app-surface)", borderColor: "var(--app-border)", borderRadius: "var(--radius-card)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div
           className="flex items-center justify-between px-4 py-3 border-b sticky top-0"
-          style={{ borderColor: "var(--app-border)", background: "var(--app-panel)" }}
+          style={{ borderColor: "var(--app-border)", background: "var(--app-surface)" }}
         >
           <span className="text-sm font-semibold" style={{ color: "var(--app-text)" }}>
             Keyboard shortcuts

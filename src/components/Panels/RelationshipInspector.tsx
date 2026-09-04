@@ -8,6 +8,7 @@ import type { WorkspaceService } from "../../services/WorkspaceService";
 import { UpdateEdgeCommand } from "../../commands/UpdateEdgeCommand";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
 import { resolveRelationshipLabel, getEffectiveBuiltinRelationships, getEffectiveRelationshipDefinition } from "../../constants/relationships";
+import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 
 interface RelationshipInspectorProps {
   edgeId: string;
@@ -59,6 +60,9 @@ export default function RelationshipInspector({
       ? customRelationships.find((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
       ?? getEffectiveRelationshipDefinition(relationshipId)
       : getEffectiveRelationshipDefinition(relationshipId);
+  const isNewCustomSelected =
+    relationshipId === "custom" &&
+    !customRelationships.some((r) => r.displayName.toLowerCase() === customLabel.toLowerCase());
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -179,10 +183,7 @@ export default function RelationshipInspector({
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm focus:outline-none transition-colors hover:bg-white/5"
           style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)", color: "var(--app-text)" }}
         >
-          <div
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ backgroundColor: currentRel?.color ?? "#6b7280" }}
-          />
+          <RelationshipColorDisc color={currentRel?.color} />
           <span className="flex-1 text-left">
             {relationshipId === "custom" && customLabel ? customLabel : currentRel?.displayName ?? relationshipId}
           </span>
@@ -192,10 +193,18 @@ export default function RelationshipInspector({
           />
         </button>
         {dropdownOpen && (
-          <div className="absolute left-0 right-0 top-full mt-1 z-50 p-1 rounded-xl shadow-xl max-h-48 overflow-y-auto" style={{ background: "var(--app-surface-2)", border: "1px solid var(--app-border)" }}>
+          <div
+            className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-xl border p-1"
+            style={{
+              background: "var(--app-surface)",
+              borderColor: "var(--app-border)",
+              boxShadow: "var(--shadow-2)",
+            }}
+          >
             {nonCustomBuiltins.map((rel) => (
               <button
                 key={rel.id}
+                aria-pressed={relationshipId === rel.id}
                 onClick={() => handleSelect(rel.id)}
                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
                 style={{
@@ -203,14 +212,8 @@ export default function RelationshipInspector({
                   color: relationshipId === rel.id ? "var(--app-text)" : "var(--app-muted)",
                 }}
               >
-                <div
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: rel.color ?? "#6b7280" }}
-                />
+                <RelationshipColorDisc color={rel.color} selected={relationshipId === rel.id} />
                 <span className="flex-1">{rel.displayName}</span>
-                {relationshipId === rel.id && (
-                  <span className="text-xs" style={{ color: "var(--app-muted)" }}>✓</span>
-                )}
               </button>
             ))}
 
@@ -226,6 +229,7 @@ export default function RelationshipInspector({
                   return (
                     <button
                       key={rel.displayName}
+                      aria-pressed={isSelected}
                       onClick={() => handleSelectCustom(rel.displayName)}
                       className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
                       style={{
@@ -233,14 +237,8 @@ export default function RelationshipInspector({
                         color: isSelected ? "var(--app-text)" : "var(--app-muted)",
                       }}
                     >
-                      <div
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: rel.color ?? "#6b7280" }}
-                      />
+                      <RelationshipColorDisc color={rel.color} selected={isSelected} />
                       <span className="flex-1">{rel.displayName}</span>
-                      {isSelected && (
-                        <span className="text-xs" style={{ color: "var(--app-muted)" }}>✓</span>
-                      )}
                     </button>
                   );
                 })}
@@ -248,18 +246,19 @@ export default function RelationshipInspector({
             )}
 
             <button
+              aria-pressed={isNewCustomSelected}
               onClick={() => handleSelect("custom")}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
               style={{
                 background:
-                  relationshipId === "custom" &&
-                    !customRelationships.some((r) => r.displayName.toLowerCase() === customLabel.toLowerCase())
-                    ? "var(--app-surface)"
-                    : undefined,
+                  isNewCustomSelected ? "var(--app-surface)" : undefined,
                 color: "var(--app-muted)",
               }}
             >
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: "#6b7280" }} />
+              <RelationshipColorDisc
+                color="#6b7280"
+                selected={isNewCustomSelected}
+              />
               <span className="flex-1">Custom...</span>
             </button>
           </div>

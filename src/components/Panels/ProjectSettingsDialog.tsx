@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { WorkspaceService } from "../../services/WorkspaceService";
+import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 
 interface ProjectSettingsDialogProps {
   workspaceService: WorkspaceService;
@@ -64,10 +65,7 @@ export default function ProjectSettingsDialog({
                     title={`Pick a color for ${rel.displayName}`}
                   />
 
-                  <div
-                    className="w-6 h-6 rounded-full border border-white/10"
-                    style={{ backgroundColor: rel.color ?? "#6b7280" }}
-                  />
+                  <RelationshipColorDisc color={rel.color} size="lg" />
                 </label>
                 <span className="flex-1 text-sm" style={{ color: "var(--app-text)" }}>
                   {rel.displayName}

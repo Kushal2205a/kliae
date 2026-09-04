@@ -374,7 +374,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
                     const rect = mathBtnRef.current?.getBoundingClientRect();
                     setMathAnchor(
                         rect
-                            ? { x: rect.left, y: rect.bottom + 6 }
+                            ? { x: rect.left, y: rect.bottom + 4 }
                             : { x: 40, y: 40 },
                     );
                 }}

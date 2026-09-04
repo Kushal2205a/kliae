@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Eye, Pencil, Settings } from "lucide-react";
 import Header from "./Header";
-import type { Breadcrumb } from "../../types";
+import type { Breadcrumb, RelationshipDefinition } from "../../types";
 import type { CanvasTool } from "../../stores/useUIStore";
 import { useUIStore } from "../../stores/useUIStore";
 
@@ -20,6 +20,7 @@ interface AppShellProps {
   onToolChange?: (tool: CanvasTool) => void;
   /** Opens the project-specific settings panel (e.g. custom relationship colors). */
   onOpenProjectSettings?: () => void;
+  customRelationships?: RelationshipDefinition[];
   children: ReactNode;
   sidebar?: ReactNode;
 }
@@ -41,6 +42,7 @@ export default function AppShell({
   currentTool,
   onToolChange,
   onOpenProjectSettings,
+  customRelationships,
   children,
   sidebar,
 }: AppShellProps) {
@@ -63,6 +65,7 @@ export default function AppShell({
         onGoHome={onGoHome}
         currentTool={currentTool}
         onToolChange={onToolChange}
+        customRelationships={customRelationships}
       />
       <div className="flex-1 flex overflow-hidden">
         {sidebar && (

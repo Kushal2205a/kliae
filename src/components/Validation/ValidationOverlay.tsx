@@ -13,11 +13,14 @@ export default function ValidationOverlay({ issues, onDismiss }: ValidationOverl
 
   return (
     <div className="absolute bottom-4 left-4 right-4 z-40">
-      <div className="bg-[#1e1e2e] border border-white/10 rounded-lg shadow-xl p-3 max-w-md mx-auto">
+      <div
+        className="mx-auto max-w-md rounded-xl border p-3"
+        style={{ background: "var(--app-surface)", borderColor: "var(--app-border)", boxShadow: "var(--shadow-2)" }}
+      >
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-sm">
             <AlertTriangle className="w-4 h-4 text-yellow-400" />
-            <span className="text-white/80 font-medium">
+            <span className="font-medium" style={{ color: "var(--app-text)" }}>
               {issues.length} issue{issues.length > 1 ? "s" : ""} found
             </span>
             {errors.length > 0 && (
@@ -26,7 +29,8 @@ export default function ValidationOverlay({ issues, onDismiss }: ValidationOverl
           </div>
           <button
             onClick={onDismiss}
-            className="p-1 rounded text-white/40 hover:text-white/80 hover:bg-white/5"
+            className="p-1 rounded-lg transition-colors hover:bg-[var(--app-hover)]"
+            style={{ color: "var(--app-muted)" }}
           >
             <X className="w-3 h-3" />
           </button>
@@ -44,11 +48,11 @@ export default function ValidationOverlay({ issues, onDismiss }: ValidationOverl
               >
                 {issue.severity === "error" ? "●" : "○"}
               </span>
-              <span className="text-white/50">{issue.message}</span>
+              <span style={{ color: "var(--app-muted)" }}>{issue.message}</span>
             </div>
           ))}
           {issues.length > 3 && (
-            <div className="text-xs text-white/30 pt-1">
+            <div className="pt-1 text-xs" style={{ color: "var(--app-muted)" }}>
               +{issues.length - 3} more issue{issues.length - 3 > 1 ? "s" : ""}
             </div>
           )}

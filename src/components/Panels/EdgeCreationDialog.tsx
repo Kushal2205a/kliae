@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getEffectiveBuiltinRelationships } from "../../constants/relationships";
 import type { RelationshipDefinition } from "../../types";
+import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 
 interface EdgeCreationDialogProps {
   sourceLabel: string;
@@ -78,46 +79,48 @@ export default function EdgeCreationDialog({
         </div>
 
         <div className="space-y-1 max-h-48 overflow-y-auto mb-4">
-          {filteredBuiltins.map((rel) => (
-            <button
-              key={rel.id}
-              onClick={() => setSelection({ kind: "builtin", id: rel.id })}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
-              style={{
-                background: selection.kind === "builtin" && selection.id === rel.id ? "var(--app-surface-2)" : undefined,
-                color: selection.kind === "builtin" && selection.id === rel.id ? "var(--app-text)" : "var(--app-muted)",
-              }}
-            >
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: rel.color ?? "#6b7280" }}
-              />
-              <span>{rel.displayName}</span>
-            </button>
-          ))}
+          {filteredBuiltins.map((rel) => {
+            const isSelected = selection.kind === "builtin" && selection.id === rel.id;
+            return (
+              <button
+                key={rel.id}
+                aria-pressed={isSelected}
+                onClick={() => setSelection({ kind: "builtin", id: rel.id })}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
+                style={{
+                  background: isSelected ? "var(--app-surface-2)" : undefined,
+                  color: isSelected ? "var(--app-text)" : "var(--app-muted)",
+                }}
+              >
+                <RelationshipColorDisc color={rel.color} selected={isSelected} />
+                <span>{rel.displayName}</span>
+              </button>
+            );
+          })}
 
           {customRelationships.length > 0 && (
             <>
               <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wide" style={{ color: "var(--app-muted)" }}>
                 Custom
               </div>
-              {filteredCustom.map((rel) => (
-                <button
-                  key={rel.displayName}
-                  onClick={() => setSelection({ kind: "existing-custom", label: rel.displayName })}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
-                  style={{
-                    background: selection.kind === "existing-custom" && selection.label === rel.displayName ? "var(--app-surface-2)" : undefined,
-                    color: selection.kind === "existing-custom" && selection.label === rel.displayName ? "var(--app-text)" : "var(--app-muted)",
-                  }}
-                >
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: rel.color ?? "#6b7280" }}
-                  />
-                  <span>{rel.displayName}</span>
-                </button>
-              ))}
+              {filteredCustom.map((rel) => {
+                const isSelected = selection.kind === "existing-custom" && selection.label === rel.displayName;
+                return (
+                  <button
+                    key={rel.displayName}
+                    aria-pressed={isSelected}
+                    onClick={() => setSelection({ kind: "existing-custom", label: rel.displayName })}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
+                    style={{
+                      background: isSelected ? "var(--app-surface-2)" : undefined,
+                      color: isSelected ? "var(--app-text)" : "var(--app-muted)",
+                    }}
+                  >
+                    <RelationshipColorDisc color={rel.color} selected={isSelected} />
+                    <span>{rel.displayName}</span>
+                  </button>
+                );
+              })}
             </>
           )}
           {filteredBuiltins.length === 0 &&
@@ -130,6 +133,7 @@ export default function EdgeCreationDialog({
               </div>
             )}
           <button
+            aria-pressed={selection.kind === "new-custom"}
             onClick={() => setSelection({ kind: "new-custom" })}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left hover:bg-white/5"
             style={{
@@ -137,7 +141,7 @@ export default function EdgeCreationDialog({
               color: selection.kind === "new-custom" ? "var(--app-text)" : "var(--app-muted)",
             }}
           >
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#6b7280" }} />
+            <RelationshipColorDisc color="#6b7280" selected={selection.kind === "new-custom"} />
             <span>Custom...</span>
           </button>
         </div>

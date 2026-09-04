@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X, RotateCcw } from "lucide-react";
 import { BUILTIN_RELATIONSHIPS, getEffectiveBuiltinRelationships } from "../../constants/relationships";
 import { setDefaultRelationshipColor, resetDefaultRelationshipColor } from "../../services/appSettings";
+import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 
 interface DefaultColorsSettingsDialogProps {
   onClose: () => void;
@@ -58,21 +59,16 @@ export default function DefaultColorsSettingsDialog({ onClose }: DefaultColorsSe
         <div className="space-y-1 max-h-80 overflow-y-auto">
           {EDITABLE_RELATIONSHIPS.map((rel) => (
             <div key={rel.id} className="flex items-center gap-3 px-1 py-1.5">
-              <label className="relative flex-shrink-0">
-                <label className="relative w-6 h-6 cursor-pointer shrink-0">
-                  <input
-                    type="color"
-                    value={rel.color ?? "#6b7280"}
-                    onChange={(e) => handleChange(rel.displayName, e.target.value)}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                    title={`Pick a color for ${rel.displayName}`}
-                  />
+              <label className="relative w-6 h-6 cursor-pointer shrink-0">
+                <input
+                  type="color"
+                  value={colorFor(rel.id)}
+                  onChange={(e) => handleChange(rel.id, e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  title={`Pick a color for ${rel.displayName}`}
+                />
 
-                  <div
-                    className="w-6 h-6 rounded-full border border-white/10"
-                    style={{ backgroundColor: rel.color ?? "#6b7280" }}
-                  />
-                </label>
+                <RelationshipColorDisc color={colorFor(rel.id)} size="lg" />
               </label>
               <span className="flex-1 text-sm" style={{ color: "var(--app-text)" }}>
                 {rel.displayName}

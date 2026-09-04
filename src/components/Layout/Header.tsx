@@ -1,12 +1,13 @@
 import { Undo2, Redo, Plus, LogOut, MousePointer2, Square, Circle, Squircle, Moon, Sun, Filter, X, Keyboard, Check, ChevronDown } from "lucide-react";
 import Breadcrumbs from "../Navigation/Breadcrumbs";
-import type { Breadcrumb } from "../../types";
+import type { Breadcrumb, RelationshipDefinition } from "../../types";
 import type { CanvasTool } from "../../stores/useUIStore";
 import { useUIStore } from "../../stores/useUIStore";
 import { useFilterStore } from "../../stores/useFilterStore";
-import { BUILTIN_RELATIONSHIPS} from "../../constants/relationships";
+import { getEffectiveBuiltinRelationships } from "../../constants/relationships";
 import { useState, useRef, useEffect } from "react";
 import ShortcutsModal from "./ShortcutsModal";
+import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 
 interface HeaderProps {
   workspaceName: string;
@@ -21,6 +22,7 @@ interface HeaderProps {
   onGoHome?: () => void;
   currentTool?: CanvasTool;
   onToolChange?: (tool: CanvasTool) => void;
+  customRelationships?: RelationshipDefinition[];
 }
 
 type ToolDef = { id: CanvasTool; icon: typeof MousePointer2; label: string };
@@ -35,6 +37,12 @@ const SHAPE_IDS = new Set<CanvasTool>(shapeTools.map((t) => t.id));
 // Every icon in this header shares this size. Mixing 14/16/20px icons across
 // one toolbar is the fastest way to make an interface feel unconsidered.
 const ICON = "w-4 h-4";
+const HEADER_POPOVER_CLASS = "absolute top-10 z-50 rounded-xl border";
+const HEADER_POPOVER_STYLE = {
+  background: "var(--app-surface)",
+  borderColor: "var(--app-border)",
+  boxShadow: "var(--shadow-2)",
+};
 
 // A quiet container used to group related controls (tool switcher, history,
 // utilities) into one visual cluster. Structure communicates relationship
@@ -62,6 +70,7 @@ export default function Header({
   onGoHome,
   currentTool,
   onToolChange,
+  customRelationships = [],
 }: HeaderProps) {
   const themeMode = useUIStore((s) => s.themeMode);
   const toggleThemeMode = useUIStore((s) => s.toggleThemeMode);
@@ -115,17 +124,19 @@ export default function Header({
     return () => document.removeEventListener("pointerdown", handler);
   }, [filterOpen]);
 
-  // All available filter keys: builtins (excluding "custom" itself, since custom
-  // edges appear under their customLabel keys) plus any custom keys active now.
-  const builtinKeys = BUILTIN_RELATIONSHIPS
+  // All available filter keys: built-ins (excluding the generic "custom"
+  // placeholder) plus the project's saved custom relationships.
+  const builtinKeys = getEffectiveBuiltinRelationships()
     .filter((r) => r.id !== "custom")
     .map((r) => ({ key: r.id, label: r.displayName, color: r.color }));
 
-  const activeCustomKeys = Array.from(selectedFilterKeys)
-    .filter((k) => k.startsWith("custom:"))
-    .map((k) => ({ key: k, label: k.slice(7), color: "#6b7280" }));
+  const customKeys = customRelationships.map((relationship) => ({
+    key: `custom:${relationship.displayName}`,
+    label: relationship.displayName,
+    color: relationship.color ?? "#6b7280",
+  }));
 
-  const allFilterOptions = [...builtinKeys, ...activeCustomKeys];
+  const allFilterOptions = [...builtinKeys, ...customKeys];
 
   return (
     <>
@@ -180,8 +191,8 @@ export default function Header({
 
               {shapeMenuOpen && (
                 <div
-                  className="absolute left-0 top-10 z-50 min-w-[160px] rounded-lg shadow-xl pt-2 pb-1"
-                  style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+                  className={`${HEADER_POPOVER_CLASS} left-0 min-w-[160px] py-1`}
+                  style={HEADER_POPOVER_STYLE}
                 >
                   {shapeTools.map((tool) => {
                     const Icon = tool.icon;
@@ -251,8 +262,8 @@ export default function Header({
 
             {filterOpen && (
               <div
-                className="absolute right-0 top-11 z-50 w-56 rounded-xl border shadow-2xl py-2"
-                style={{ background: "var(--app-surface)", borderColor: "var(--app-border)" }}
+                className={`${HEADER_POPOVER_CLASS} right-0 w-56 py-2`}
+                style={HEADER_POPOVER_STYLE}
               >
                 <div className="flex items-center justify-between px-3 pb-2 border-b" style={{ borderColor: "var(--app-border)" }}>
                   <span className="text-xs font-semibold" style={{ color: "var(--app-muted)" }}>
@@ -287,6 +298,7 @@ export default function Header({
                     return (
                       <button
                         key={key}
+                        aria-pressed={checked}
                         onClick={() => {
                           toggleKey(key);
                           if (!filterActive) toggleActive();
@@ -294,12 +306,8 @@ export default function Header({
                         className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs hover:bg-[var(--app-hover)] transition-colors"
                         style={{ color: "var(--app-text)" }}
                       >
-                        <span
-                          className="flex-shrink-0 w-2 h-2 rounded-full"
-                          style={{ background: checked ? color : "transparent", border: `1.5px solid ${color}` }}
-                        />
+                        <RelationshipColorDisc color={color} selected={checked} />
                         <span className="flex-1 text-left">{label}</span>
-                        {checked && <Check className="w-3 h-3" style={{ color: "var(--app-muted)" }} />}
                       </button>
                     );
                   })}

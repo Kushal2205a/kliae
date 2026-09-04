@@ -458,8 +458,14 @@ export function CanvasOverlay({
 
       {ctxMenu && (
         <div
-          className="fixed z-50 min-w-[160px] rounded-lg shadow-xl py-1"
-          style={{ left: ctxMenu.x, top: ctxMenu.y, background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
+          className="fixed z-50 min-w-[160px] rounded-xl border py-1"
+          style={{
+            left: ctxMenu.x,
+            top: ctxMenu.y,
+            background: "var(--app-surface)",
+            borderColor: "var(--app-border)",
+            boxShadow: "var(--shadow-2)",
+          }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           {menuItems.map((item, i) => (

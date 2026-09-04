@@ -451,8 +451,14 @@ function BaseNode({ id, data, selected }: NodeProps) {
 
       {ctxMenu && createPortal(
         <div
-          className="fixed z-50 bg-[var(--app-surface-2)] border rounded-lg py-1 min-w-[150px]"
-          style={{ left: ctxMenu.x, top: ctxMenu.y, borderColor: "var(--app-border)", boxShadow: "var(--shadow-3)" }}
+          className="fixed z-50 min-w-[160px] rounded-xl border py-1"
+          style={{
+            left: ctxMenu.x,
+            top: ctxMenu.y,
+            background: "var(--app-surface)",
+            borderColor: "var(--app-border)",
+            boxShadow: "var(--shadow-2)",
+          }}
           onPointerDown={(e) => e.stopPropagation()}
         >
           {!hasContent ? (
