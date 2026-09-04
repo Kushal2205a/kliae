@@ -180,7 +180,7 @@ export default function Header({
 
               {shapeMenuOpen && (
                 <div
-                  className="absolute left-0 top-full z-50 min-w-[160px] rounded-lg shadow-xl pt-2 pb-1"
+                  className="absolute left-0 top-10 z-50 min-w-[160px] rounded-lg shadow-xl pt-2 pb-1"
                   style={{ background: "var(--app-surface)", border: "1px solid var(--app-border)" }}
                 >
                   {shapeTools.map((tool) => {
