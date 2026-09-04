@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { X, Trash2, ChevronDown } from "lucide-react";
+import { ArrowDown, X, Trash2, ChevronDown } from "lucide-react";
 import type { Edge } from "../../types";
 import type { EdgeService } from "../../services/EdgeService";
 import type { NodeService } from "../../services/NodeService";
@@ -7,7 +7,7 @@ import type { CommandHistoryService } from "../../services/CommandHistoryService
 import type { WorkspaceService } from "../../services/WorkspaceService";
 import { UpdateEdgeCommand } from "../../commands/UpdateEdgeCommand";
 import { DeleteEdgeCommand } from "../../commands/DeleteEdgeCommand";
-import { resolveRelationshipLabel, getEffectiveBuiltinRelationships, getEffectiveRelationshipDefinition } from "../../constants/relationships";
+import { getEffectiveBuiltinRelationships, getEffectiveRelationshipDefinition } from "../../constants/relationships";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
 import { useEscapeKey } from "../../hooks/useEscapeKey";
 
@@ -67,6 +67,10 @@ export default function RelationshipInspector({
   const isNewCustomSelected =
     relationshipId === "custom" &&
     !customRelationships.some((r) => r.displayName.toLowerCase() === customLabel.toLowerCase());
+  const currentRelationshipLabel =
+    relationshipId === "custom" && customLabel
+      ? customLabel
+      : currentRel?.displayName ?? relationshipId;
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -145,39 +149,34 @@ export default function RelationshipInspector({
       </div>
 
       <div
-        className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm min-w-0"
-        style={{ background: "var(--app-surface-2)" }}
+        className="min-w-0 rounded-xl border px-3 py-3"
+        style={{ background: "var(--app-surface-2)", borderColor: "var(--app-border)" }}
       >
-        <span
-          className="flex-1 truncate"
-          title={sourceNode?.label}
-          style={{ color: "var(--app-text)" }}
-        >
-          {sourceNode?.label ?? "?"}
-        </span>
+        <div className="min-w-0">
+          <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--app-muted)" }}>
+            From
+          </div>
+          <div className="truncate text-sm font-medium" title={sourceNode?.label} style={{ color: "var(--app-text)" }}>
+            {sourceNode?.label ?? "?"}
+          </div>
+        </div>
 
-        <span className="shrink-0 text-xs" style={{ color: "var(--app-muted)" }}>
-          ──
-        </span>
+        <div className="my-2 flex min-w-0 items-center gap-2 pl-0.5">
+          <ArrowDown className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--app-muted)" }} />
+          <RelationshipColorDisc color={currentRel?.color} />
+          <span className="truncate text-xs font-medium" style={{ color: currentRel?.color ?? "var(--app-accent)" }}>
+            {currentRelationshipLabel}
+          </span>
+        </div>
 
-        <span
-          className="shrink-0 font-medium"
-          style={{ color: "var(--app-accent)" }}
-        >
-          {resolveRelationshipLabel(edge.relationship)}
-        </span>
-
-        <span className="shrink-0 text-xs" style={{ color: "var(--app-muted)" }}>
-          ──➤
-        </span>
-
-        <span
-          className="flex-1 truncate text-right"
-          title={targetNode?.label}
-          style={{ color: "var(--app-text)" }}
-        >
-          {targetNode?.label ?? "?"}
-        </span>
+        <div className="min-w-0">
+          <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wider" style={{ color: "var(--app-muted)" }}>
+            To
+          </div>
+          <div className="truncate text-sm font-medium" title={targetNode?.label} style={{ color: "var(--app-text)" }}>
+            {targetNode?.label ?? "?"}
+          </div>
+        </div>
       </div>
 
       <div className="relative" ref={dropdownRef}>
@@ -189,7 +188,7 @@ export default function RelationshipInspector({
         >
           <RelationshipColorDisc color={currentRel?.color} />
           <span className="flex-1 text-left">
-            {relationshipId === "custom" && customLabel ? customLabel : currentRel?.displayName ?? relationshipId}
+            {currentRelationshipLabel}
           </span>
           <ChevronDown
             className={`w-4 h-4 transition-transform ${dropdownOpen ? "rotate-180" : ""}`}
