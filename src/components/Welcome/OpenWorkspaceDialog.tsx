@@ -1,4 +1,5 @@
 import { open } from "@tauri-apps/plugin-dialog";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface OpenWorkspaceDialogProps {
   onConfirm: (path: string) => void;
@@ -9,6 +10,8 @@ export default function OpenWorkspaceDialog({
   onConfirm,
   onCancel,
 }: OpenWorkspaceDialogProps) {
+  useEscapeKey(onCancel);
+
   const handleBrowse = async () => {
     const selected = await open({
       directory: true,

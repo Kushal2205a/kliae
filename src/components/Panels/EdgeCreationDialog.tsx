@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getEffectiveBuiltinRelationships } from "../../constants/relationships";
 import type { RelationshipDefinition } from "../../types";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface EdgeCreationDialogProps {
   sourceLabel: string;
@@ -24,6 +25,8 @@ export default function EdgeCreationDialog({
   onConfirm,
   onCancel,
 }: EdgeCreationDialogProps) {
+  useEscapeKey(onCancel);
+
   const [selection, setSelection] = useState<Selection>({ kind: "builtin", id: "uses" });
   const [customLabel, setCustomLabel] = useState("");
   // Read fresh each render so app-wide default color overrides (edited from

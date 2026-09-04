@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import type { WorkspaceService } from "../../services/WorkspaceService";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ProjectSettingsDialogProps {
   workspaceService: WorkspaceService;
@@ -15,6 +16,8 @@ export default function ProjectSettingsDialog({
   onClose,
   onColorsChanged,
 }: ProjectSettingsDialogProps) {
+  useEscapeKey(onClose);
+
   // Bump this after each save to re-read workspaceService's in-memory
   // manifest, same pattern as DefaultColorsSettingsDialog.
   const [, setVersion] = useState(0);

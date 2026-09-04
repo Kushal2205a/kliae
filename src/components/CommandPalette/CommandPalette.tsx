@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface CommandItem {
   type: string;
@@ -21,6 +22,7 @@ export default function CommandPalette({
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  useEscapeKey(onClose);
 
   const filtered = query
     ? commands.filter(
@@ -41,6 +43,8 @@ export default function CommandPalette({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
         onClose();
         return;
       }

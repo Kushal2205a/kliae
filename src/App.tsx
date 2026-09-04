@@ -450,9 +450,6 @@ export default function App() {
         graphCanvasRef.current?.deleteSelectedEdges();
         graphCanvasRef.current?.deleteSelectedNodes();
       },
-      escape: () => {
-        if (uiStore.commandPaletteOpen) uiStore.closeCommandPalette();
-      },
     }),
     [handleUndo, handleRedo, handleCreateNode, uiStore],
   );

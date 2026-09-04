@@ -3,6 +3,7 @@ import { X, RotateCcw } from "lucide-react";
 import { BUILTIN_RELATIONSHIPS, getEffectiveBuiltinRelationships } from "../../constants/relationships";
 import { setDefaultRelationshipColor, resetDefaultRelationshipColor } from "../../services/appSettings";
 import RelationshipColorDisc from "../UI/RelationshipColorDisc";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface DefaultColorsSettingsDialogProps {
   onClose: () => void;
@@ -13,6 +14,8 @@ interface DefaultColorsSettingsDialogProps {
 const EDITABLE_RELATIONSHIPS = BUILTIN_RELATIONSHIPS.filter((r) => r.id !== "custom");
 
 export default function DefaultColorsSettingsDialog({ onClose }: DefaultColorsSettingsDialogProps) {
+  useEscapeKey(onClose);
+
   // getEffectiveBuiltinRelationships() reads straight from localStorage, so
   // this component re-reads it after every edit via a bump counter rather
   // than holding its own copy of the override state.

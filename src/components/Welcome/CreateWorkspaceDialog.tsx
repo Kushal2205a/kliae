@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface CreateWorkspaceDialogProps {
   onConfirm: (path: string, name: string) => void;
@@ -10,6 +11,8 @@ export default function CreateWorkspaceDialog({
   onConfirm,
   onCancel,
 }: CreateWorkspaceDialogProps) {
+  useEscapeKey(onCancel);
+
   const [name, setName] = useState("My Knowledge Graph");
   const [folderPath, setFolderPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);

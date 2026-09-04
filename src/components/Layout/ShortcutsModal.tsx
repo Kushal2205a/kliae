@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useEscapeKey } from "../../hooks/useEscapeKey";
 
 interface ShortcutItem {
   keys: string[];
@@ -48,6 +49,8 @@ interface ShortcutsModalProps {
 }
 
 export default function ShortcutsModal({ open, onClose }: ShortcutsModalProps) {
+  useEscapeKey(onClose, open);
+
   if (!open) return null;
 
   return (
