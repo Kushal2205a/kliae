@@ -1272,12 +1272,15 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
       />
       {isEmpty && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
-          <div className="bg-[#141414]/80 backdrop-blur-sm rounded-xl border border-white/10 px-8 py-6 text-center shadow-2xl">
-            <div className="text-4xl mb-3 opacity-30">⬡</div>
-            <h3 className="text-white/70 font-medium text-sm mb-1">This graph is empty</h3>
-            <p className="text-white/40 text-xs">
-              Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/60 text-[11px] font-mono">Ctrl+N</kbd> or click{" "}
-              <span className="text-white/80">+ Add Node</span> to get started
+          <div
+            className="backdrop-blur-sm rounded-xl border px-8 py-6 text-center"
+            style={{ background: "var(--app-panel)", borderColor: "var(--app-border)", boxShadow: "var(--shadow-2)" }}
+          >
+            <div className="text-4xl mb-3" style={{ color: "var(--app-muted)", opacity: 0.45 }}>⬡</div>
+            <h3 className="font-medium text-sm mb-1" style={{ color: "var(--app-text-secondary)" }}>This graph is empty</h3>
+            <p className="text-xs" style={{ color: "var(--app-muted)" }}>
+              Press <kbd className="px-1.5 py-0.5 rounded text-[11px] font-mono" style={{ background: "var(--app-active)", color: "var(--app-text-secondary)" }}>Ctrl+N</kbd> or click{" "}
+              <span style={{ color: "var(--app-text-secondary)" }}>+ Add Node</span> to get started
             </p>
           </div>
         </div>
