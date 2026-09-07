@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { mergeRegister } from "@lexical/utils";
@@ -69,6 +69,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
     const [isNumberedList, setIsNumberedList] = useState(false);
     const [isCode, setIsCode] = useState(false);
     const [codeLanguage, setCodeLanguage] = useState("javascript");
+    const toolbarRef = useRef<HTMLDivElement>(null);
 
     // Language picker dropdown (custom, portal-rendered so the node's
     // overflow-hidden padding can't clip it, unlike a native <select>).
@@ -90,6 +91,14 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
 
     const currentLangLabel =
         CODE_LANGUAGES.find((l) => l.value === codeLanguage)?.label ?? codeLanguage;
+
+    // The language trigger is appended after the code button. Compact nodes
+    // cannot show the whole toolbar at once, so reveal the new control as part
+    // of the same render instead of leaving its label clipped at the edge.
+    useLayoutEffect(() => {
+        if (!isCode || !toolbarRef.current) return;
+        toolbarRef.current.scrollLeft = toolbarRef.current.scrollWidth;
+    }, [isCode]);
 
     const openLangMenu = useCallback(() => {
         const btn = langBtnRef.current;
@@ -261,6 +270,7 @@ export default function ToolbarPlugin({ onAddImage }: ToolbarPluginProps) {
             }
         `}</style>
         <div
+            ref={toolbarRef}
             className="mb-2 flex items-center gap-1 min-w-0 overflow-x-auto overflow-y-hidden nodrag nowheel toolbar-scroll"
             style={{ color: "var(--app-text)" }}
             onMouseDown={(e) => e.preventDefault()}
