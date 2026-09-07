@@ -23,7 +23,7 @@ function CodeHighlightPlugin() {
 
 function Placeholder() {
     return (
-        <div className="absolute left-1 top-1 pointer-events-none text-xs opacity-40">
+        <div className="absolute inset-0 -translate-x-px px-1 py-1 pointer-events-none text-xs leading-5 opacity-40">
             Start typing...
         </div>
     );
@@ -33,12 +33,14 @@ interface LexicalEditorProps {
     initialState?: string;
     onChange?: (editorState: string) => void;
     onAddImage?: () => void;
+    autoGrow?: boolean;
 }
 
 export default function LexicalEditor({
     initialState,
     onChange,
     onAddImage,
+    autoGrow = false,
 }: LexicalEditorProps) {
     const initialConfig = {
         namespace: "KnowledgeGraphEditor",
@@ -58,24 +60,23 @@ export default function LexicalEditor({
 
     return (
         <LexicalComposer initialConfig={initialConfig}>
-            <div className="relative flex h-full flex-col nodrag nowheel">
+            <div className={`relative flex flex-col nodrag nowheel ${autoGrow ? "" : "h-full"}`}>
                 <ToolbarPlugin onAddImage={onAddImage} />
-                <div className="relative flex-1 min-h-0">
+                <div className={`relative ${autoGrow ? "" : "flex-1 min-h-0"}`}>
                     <RichTextPlugin
                         contentEditable={
                             <ContentEditable
-                                className="
+                                className={`
                                     nodrag
                                     nowheel
-                                    h-full
                                     px-1
                                     py-1
                                     outline-none
                                     text-xs
                                     leading-5
                                     cursor-text
-                                    overflow-y-auto
-                                "
+                                    ${autoGrow ? "min-h-7 overflow-visible" : "h-full overflow-y-auto"}
+                                `}
                                 style={{ color: "var(--app-text)" }}
                             />
                         }

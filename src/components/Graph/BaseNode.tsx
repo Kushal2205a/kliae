@@ -88,46 +88,13 @@ function BaseNode({ id, data, selected }: NodeProps) {
   const imageOnlyContent = hasContent && imageBlocks.length > 0 && !richTextBlock;
   const shouldFillImageArea = imageBlocks.length > 0 && !!nodeHeight;
 
-  // The node must never be resizable narrower than its own toolbar needs
-  // when in edit mode, or buttons get clipped at the edge with no way to
-  // reach them (the overflow-hidden wrapper hides the scrollable overflow).
-  const dynamicMinWidth = useMemo(() => {
-    const BASE_MIN_WIDTH = 180;
-    // Enough for every toolbar control plus the language picker trigger
-    // (which shows the full language label, e.g. "Objective-C") without the
-    // node edge clipping or forcing horizontal scroll.
-    const TOOLBAR_MIN_WIDTH = 400;
-    return hasContent && contentEditing
-      ? Math.max(BASE_MIN_WIDTH, TOOLBAR_MIN_WIDTH)
-      : BASE_MIN_WIDTH;
-  }, [hasContent, contentEditing]);
-
-  // The node must never be resizable below the space its own header/toolbar
-  // need, or content visually escapes the rounded border (and sits under
-  // the resize handles). Account for: title row, the divider + a sliver of
-  // content (~72px base), plus the toolbar row when in edit mode (~40px).
-  const dynamicMinHeight = useMemo(() => {
-    const BASE_MIN_HEIGHT = 72;
-    const CONTENT_DIVIDER_HEIGHT = 24; // divider + minimal text line
-    const TOOLBAR_HEIGHT = 40; // toolbar row + its bottom margin
-
-    let min = BASE_MIN_HEIGHT;
-    if (hasContent) {
-      min += CONTENT_DIVIDER_HEIGHT;
-      if (contentEditing) {
-        min += TOOLBAR_HEIGHT;
-      }
-    }
-    return min;
-  }, [hasContent, contentEditing]);
-
-  useEffect(() => {
-    if (nodeHeight && nodeHeight < dynamicMinHeight) {
-      onResizeNode(id, Math.max(nodeWidth ?? 180, dynamicMinWidth), dynamicMinHeight);
-    } else if (nodeWidth && nodeWidth < dynamicMinWidth) {
-      onResizeNode(id, dynamicMinWidth, nodeHeight ?? dynamicMinHeight);
-    }
-  }, [dynamicMinHeight, dynamicMinWidth, nodeHeight, nodeWidth, id, onResizeNode]);
+  // Content is allowed to use the node's existing width. The toolbar already
+  // scrolls horizontally, so entering edit mode must not inflate a compact
+  // node just to fit every control at once. Nodes without a user-set height
+  // remain content-sized and grow naturally as the editor gains lines.
+  const autoGrowContent = !nodeHeight;
+  const minNodeWidth = 180;
+  const minNodeHeight = 72;
 
   // ── title editing ──────────────────────────────────────────────────────────
 
@@ -288,7 +255,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
     <>
       <div
         className={`
-          relative flex h-full w-full flex-col px-4 py-3.5 border
+          relative flex flex-col px-4 py-3.5 border
+          ${nodeWidth ? "w-full" : ""} ${nodeHeight ? "h-full" : ""}
           ${nodeWidth ? "" : imageOnlyContent ? "max-w-none" : "max-w-[320px]"}
           transition-[border-color,box-shadow,opacity] duration-150
         `}
@@ -298,7 +266,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
           boxShadow: selected ? "0 0 0 3px var(--app-border-focus), var(--shadow-2)" : "var(--shadow-1)",
           width: nodeWidth ? "100%" : undefined,
           height: nodeHeight ? "100%" : undefined,
-          minWidth: dynamicMinWidth,
+          minWidth: minNodeWidth,
           background: "var(--app-surface)",
           color: "var(--app-text)",
         }}
@@ -310,8 +278,8 @@ function BaseNode({ id, data, selected }: NodeProps) {
       >
         <NodeResizer
           isVisible={selected}
-          minWidth={dynamicMinWidth}
-          minHeight={dynamicMinHeight}
+          minWidth={minNodeWidth}
+          minHeight={minNodeHeight}
           lineClassName="!border-white/50"
           handleClassName="!h-2 !w-2 !rounded-sm !border !border-black/40 !bg-white/80"
           onResizeEnd={(_event, params) => {
@@ -377,11 +345,12 @@ function BaseNode({ id, data, selected }: NodeProps) {
                   className="hidden"
                   onChange={handleImageSelected}
                 />
-                <div className="flex-1 min-h-0">
+                <div className={autoGrowContent ? "" : "flex-1 min-h-0"}>
                   <LexicalEditor
                     initialState={richTextBlock?.editorState}
                     onChange={updateRichText}
                     onAddImage={() => imageInputRef.current?.click()}
+                    autoGrow={autoGrowContent}
                   />
                 </div>
               </>
