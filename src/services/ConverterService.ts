@@ -1,4 +1,4 @@
-import type { Graph } from "../types";
+import { ANCHOR_NODE_TYPE, type Graph } from "../types";
 import type { NodeService } from "./NodeService";
 import type { EdgeService } from "./EdgeService";
 import type { WorkspaceService } from "./WorkspaceService";
@@ -59,6 +59,13 @@ export class ConverterService {
       const view = graph.views.nodeViews[nodeId];
       if (!node || !view) continue;
 
+      // Older workspaces may contain an anchor label captured before its
+      // parent was renamed. Render anchors from the authoritative parent so
+      // those graphs repair visually without requiring another rename.
+      const label = node.type === ANCHOR_NODE_TYPE && graph.parentNodeId
+        ? this.nodeService.getNode(graph.parentNodeId)?.label ?? node.label
+        : node.label;
+
       nodes.push({
         id: node.id,
         type: node.type,
@@ -68,7 +75,7 @@ export class ConverterService {
           height: view.height,
         },
         data: {
-          label: node.label,
+          label,
           content: node.content,
           nodeId: node.id,
           color: view.color,
