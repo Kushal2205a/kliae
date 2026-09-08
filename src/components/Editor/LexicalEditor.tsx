@@ -14,6 +14,7 @@ import { EquationNode } from "./MathNodes";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useEffect } from "react";
 import lexicalTheme from "./lexicalTheme";
+import { readClipboardImages } from "../../utils/clipboardImage";
 
 function CodeHighlightPlugin() {
     const [editor] = useLexicalComposerContext();
@@ -89,10 +90,21 @@ export default function LexicalEditor({
                                         ? itemFiles
                                         : Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
 
-                                    if (imageFiles.length === 0) return;
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    onPasteImages?.(imageFiles);
+                                    if (imageFiles.length > 0) {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        onPasteImages?.(imageFiles);
+                                        return;
+                                    }
+
+                                    // Desktop webviews can expose an empty
+                                    // ClipboardEvent for native image data.
+                                    // Let ordinary text paste remain native,
+                                    // while checking the system clipboard for
+                                    // the omitted image in parallel.
+                                    void readClipboardImages().then((files) => {
+                                        if (files.length > 0) onPasteImages?.(files);
+                                    });
                                 }}
                             />
                         }
