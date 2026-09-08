@@ -6,6 +6,7 @@ import "@fontsource/inter/600.css";
 import "katex/dist/katex.min.css";
 import "./index.css";
 import App from "./App";
+import UpdateNotifier from "./components/Update/UpdateNotifier";
 
 // The webview runs under XWayland where GTK can't see the compositor scale,
 // so the Rust side applies set_zoom(scale) instead. Stroke-based icon SVGs
@@ -21,5 +22,6 @@ document.documentElement.style.setProperty(
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />
+    <UpdateNotifier />
   </StrictMode>,
 );

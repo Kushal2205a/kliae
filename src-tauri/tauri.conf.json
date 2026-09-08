@@ -45,7 +45,7 @@
         "https://github.com/Kushal2205a/kliae/releases/latest/download/latest.json"
       ],
       "windows": {
-        "installMode": "basicUi"
+        "installMode": "passive"
       }
     }
   }

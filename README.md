@@ -91,7 +91,7 @@ Kliae lets you build interconnected knowledge graphs, break concepts into nested
 ### User Experience
 - Dark and light themes
 - Keyboard shortcuts for common actions, with editing fields excluded so shortcuts never interrupt typing
-- In-app updater that notifies you when a new version is available
+- Optional in-app updates with download progress and restart control
 - Command Palette
 - Context menus
 - Responsive desktop interface
