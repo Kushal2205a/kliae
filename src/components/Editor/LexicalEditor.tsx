@@ -33,6 +33,7 @@ interface LexicalEditorProps {
     initialState?: string;
     onChange?: (editorState: string) => void;
     onAddImage?: () => void;
+    onPasteImages?: (files: File[]) => void;
     autoGrow?: boolean;
 }
 
@@ -40,6 +41,7 @@ export default function LexicalEditor({
     initialState,
     onChange,
     onAddImage,
+    onPasteImages,
     autoGrow = false,
 }: LexicalEditorProps) {
     const initialConfig = {
@@ -78,6 +80,20 @@ export default function LexicalEditor({
                                     ${autoGrow ? "min-h-7 overflow-visible" : "h-full overflow-y-auto"}
                                 `}
                                 style={{ color: "var(--app-text)" }}
+                                onPaste={(event) => {
+                                    const itemFiles = Array.from(event.clipboardData.items)
+                                        .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+                                        .map((item) => item.getAsFile())
+                                        .filter((file): file is File => file !== null);
+                                    const imageFiles = itemFiles.length > 0
+                                        ? itemFiles
+                                        : Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
+
+                                    if (imageFiles.length === 0) return;
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    onPasteImages?.(imageFiles);
+                                }}
                             />
                         }
                         placeholder={<Placeholder />}

@@ -24,6 +24,19 @@ function getRichTextBlock(
   );
 }
 
+function readImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = typeof reader.result === "string" ? reader.result : "";
+      if (src) resolve(src);
+      else reject(new Error("Failed to read pasted image"));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read pasted image"));
+    reader.readAsDataURL(file);
+  });
+}
+
 // ─── component ──────────────────────────────────────────────────────────────
 
 function BaseNode({ id, data, selected }: NodeProps) {
@@ -77,6 +90,11 @@ function BaseNode({ id, data, selected }: NodeProps) {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const latestContentRef = useRef(nodeContent);
+
+  useEffect(() => {
+    latestContentRef.current = nodeContent;
+  }, [nodeContent]);
 
   const richTextBlock = getRichTextBlock(nodeContent);
   const imageBlocks = useMemo(
@@ -174,38 +192,41 @@ function BaseNode({ id, data, selected }: NodeProps) {
   /** Debounced save of Lexical EditorState JSON. */
   const updateRichText = useCallback(
     (editorState: string) => {
-      if (!nodeContent) return;
+      if (!latestContentRef.current) return;
 
       if (saveTimeout.current) {
         clearTimeout(saveTimeout.current);
       }
 
       saveTimeout.current = window.setTimeout(() => {
-        const richText = getRichTextBlock(nodeContent);
+        const latestContent = latestContentRef.current;
+        if (!latestContent) return;
+        const richText = getRichTextBlock(latestContent);
 
         let nextContent: NodeContentDocument;
 
         if (richText) {
           nextContent = {
-            ...nodeContent,
-            blocks: nodeContent.blocks.map((block) =>
+            ...latestContent,
+            blocks: latestContent.blocks.map((block) =>
               block.type === "richtext" ? { ...block, editorState } : block,
             ),
           };
         } else {
           nextContent = {
-            ...nodeContent,
+            ...latestContent,
             blocks: [
               { id: crypto.randomUUID(), type: "richtext", editorState },
-              ...nodeContent.blocks.filter((b) => b.type !== "paragraph"),
+              ...latestContent.blocks.filter((b) => b.type !== "paragraph"),
             ],
           };
         }
 
+        latestContentRef.current = nextContent;
         onUpdateNodeContent(id, nextContent);
       }, 300);
     },
-    [id, nodeContent, onUpdateNodeContent],
+    [id, onUpdateNodeContent],
   );
 
   useEffect(() => {
@@ -216,38 +237,52 @@ function BaseNode({ id, data, selected }: NodeProps) {
     };
   }, []);
 
-  /** Appends an image block directly onto the content document. */
-  const handleImageSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file || !hasContent || !nodeContent) return;
+  /** Appends uploaded or pasted images directly onto the content document. */
+  const appendImageFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0 || !latestContentRef.current) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const src = typeof reader.result === "string" ? reader.result : "";
-      if (!src) return;
-      const imageBlock: ImageContentBlock = {
-        id: crypto.randomUUID(),
-        type: "image",
-        src,
-        alt: file.name,
-      };
-      onUpdateNodeContent(id, {
-        ...nodeContent,
-        blocks: [...nodeContent.blocks, imageBlock],
-      });
+    let imageBlocks: ImageContentBlock[];
+    try {
+      imageBlocks = await Promise.all(
+        files.map(async (file): Promise<ImageContentBlock> => ({
+          id: crypto.randomUUID(),
+          type: "image",
+          src: await readImageFile(file),
+          alt: file.name || "Pasted image",
+        })),
+      );
+    } catch (error) {
+      console.error("Failed to paste image into node", error);
+      return;
+    }
+    const latestContent = latestContentRef.current;
+    if (!latestContent) return;
+
+    const nextContent: NodeContentDocument = {
+      ...latestContent,
+      blocks: [...latestContent.blocks, ...imageBlocks],
     };
-    reader.readAsDataURL(file);
-  }, [hasContent, nodeContent, id, onUpdateNodeContent]);
+    latestContentRef.current = nextContent;
+    onUpdateNodeContent(id, nextContent);
+  }, [id, onUpdateNodeContent]);
+
+  const handleImageSelected = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    event.target.value = "";
+    void appendImageFiles(files);
+  }, [appendImageFiles]);
 
   /** Removes a single image block from the content document. */
   const handleDeleteImage = useCallback((imageId: string) => {
-    if (!nodeContent) return;
-    onUpdateNodeContent(id, {
-      ...nodeContent,
-      blocks: nodeContent.blocks.filter((b) => b.id !== imageId),
-    });
-  }, [nodeContent, id, onUpdateNodeContent]);
+    const latestContent = latestContentRef.current;
+    if (!latestContent) return;
+    const nextContent: NodeContentDocument = {
+      ...latestContent,
+      blocks: latestContent.blocks.filter((b) => b.id !== imageId),
+    };
+    latestContentRef.current = nextContent;
+    onUpdateNodeContent(id, nextContent);
+  }, [id, onUpdateNodeContent]);
 
   // ── render ─────────────────────────────────────────────────────────────────
 
@@ -350,6 +385,7 @@ function BaseNode({ id, data, selected }: NodeProps) {
                     initialState={richTextBlock?.editorState}
                     onChange={updateRichText}
                     onAddImage={() => imageInputRef.current?.click()}
+                    onPasteImages={(files) => void appendImageFiles(files)}
                     autoGrow={autoGrowContent}
                   />
                 </div>
