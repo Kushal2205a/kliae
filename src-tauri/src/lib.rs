@@ -62,6 +62,76 @@ fn read_dir(path: String) -> Result<Vec<serde_json::Value>, String> {
     Ok(result)
 }
 
+// Tauri 2.11's AppImage bundler currently includes libwayland from its Ubuntu
+// runner. On newer Wayland/Mesa systems (notably Arch and Fedora), WebKit's
+// child process can then load the bundled client next to the host EGL driver
+// and abort with EGL_BAD_PARAMETER before it paints the page.
+//
+// Preloading the matching host client for child processes avoids that ABI mix.
+// This is deliberately AppImage + Wayland only: development builds and native
+// packages already resolve libwayland from the host and need no intervention.
+#[cfg(target_os = "linux")]
+fn configure_appimage_wayland_compatibility() {
+    let is_appimage =
+        std::env::var_os("APPIMAGE").is_some() || std::env::var_os("APPDIR").is_some();
+    let is_wayland_session = std::env::var_os("WAYLAND_DISPLAY").is_some()
+        || std::env::var("XDG_SESSION_TYPE")
+            .map(|value| value.eq_ignore_ascii_case("wayland"))
+            .unwrap_or(false);
+
+    if !is_appimage || !is_wayland_session {
+        return;
+    }
+
+    let current_preload = std::env::var_os("LD_PRELOAD").unwrap_or_default();
+    if current_preload
+        .to_string_lossy()
+        .split([':', ' '])
+        .any(|entry| {
+            entry.ends_with("/libwayland-client.so.0") || entry == "libwayland-client.so.0"
+        })
+    {
+        return;
+    }
+
+    // Put architecture-specific directories before generic /usr/lib: on
+    // Fedora, /usr/lib is 32-bit while /usr/lib64 is the native x86_64 path.
+    #[cfg(target_arch = "x86_64")]
+    const CANDIDATES: &[&str] = &[
+        "/usr/lib/x86_64-linux-gnu/libwayland-client.so.0",
+        "/lib/x86_64-linux-gnu/libwayland-client.so.0",
+        "/usr/lib64/libwayland-client.so.0",
+        "/lib64/libwayland-client.so.0",
+        "/usr/lib/libwayland-client.so.0",
+    ];
+
+    #[cfg(target_arch = "aarch64")]
+    const CANDIDATES: &[&str] = &[
+        "/usr/lib/aarch64-linux-gnu/libwayland-client.so.0",
+        "/lib/aarch64-linux-gnu/libwayland-client.so.0",
+        "/usr/lib64/libwayland-client.so.0",
+        "/lib64/libwayland-client.so.0",
+        "/usr/lib/libwayland-client.so.0",
+    ];
+
+    #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+    const CANDIDATES: &[&str] = &["/usr/lib/libwayland-client.so.0"];
+
+    let Some(host_library) = CANDIDATES
+        .iter()
+        .find(|candidate| std::path::Path::new(candidate).is_file())
+    else {
+        return;
+    };
+
+    let mut preload = std::ffi::OsString::from(host_library);
+    if !current_preload.is_empty() {
+        preload.push(":");
+        preload.push(current_preload);
+    }
+    std::env::set_var("LD_PRELOAD", preload);
+}
+
 // Under XWayland (GDK_BACKEND=x11) GTK cannot see the compositor's scale
 // factor, so the webview renders at 1x and the UI looks tiny on HiDPI
 // displays. Detect the real scale ourselves: ask Hyprland first, then fall
@@ -111,6 +181,9 @@ fn detect_x11_ui_scale() -> f64 {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    configure_appimage_wayland_compatibility();
+
     // Route the webview through XWayland on Linux, matching the packaged
     // AppImage (its linuxdeploy GTK hook exports GDK_BACKEND=x11 for the
     // same reason): WebKitGTK's native Wayland backend desyncs its input
@@ -139,7 +212,8 @@ pub fn run() {
 
             #[cfg(desktop)]
             {
-                app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+                app.handle()
+                    .plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
             }
 

@@ -122,13 +122,11 @@ xattr -cr /Applications/Kliae.app
 
 Both warnings are expected for an early beta release without paid signing certificates, and will be resolved in a future release.
 
-**Linux**: The Linux builds are produced on Ubuntu 22.04, which bundles older Wayland libraries into the `.AppImage`. On newer distributions (Arch, Fedora, recent Ubuntu with current Mesa drivers) this can break WebKitGTK's GPU initialization and show up as a **blank white window**. If that happens, launch it with your system's Wayland libraries preloaded:
+**Linux**: Tauri 2.11 AppImages can bundle a Wayland client library that is incompatible with newer Mesa versions, causing a **blank white window** on distributions such as Arch and Fedora. Kliae automatically uses the matching system library on affected Wayland sessions. For version 0.2.1 and older, use this launch workaround:
 
 ```bash
-LD_PRELOAD='/usr/lib/libwayland-client.so.0 /usr/lib/libwayland-egl.so.1' ./Kliae_*_amd64.AppImage
+LD_PRELOAD=/usr/lib/libwayland-client.so.0 ./Kliae_*_amd64.AppImage
 ```
-
-This will be fixed in an upcoming release by building on a newer base image.
 
 ## Tech Stack
 
