@@ -32,6 +32,7 @@ import type { CommandHistoryService } from "../../services/CommandHistoryService
 import type { WorkspaceService } from "../../services/WorkspaceService";
 import type { Graph, CanvasObject, DragOverride, NodeContentDocument } from "../../types";
 import { DEFAULT_CANVAS_STYLE, ANCHOR_NODE_TYPE } from "../../types";
+import { readClipboardImages } from "../../utils/clipboardImage";
 
 const nodeTypes = { concept: ConceptNode, anchor: AnchorNode };
 const edgeTypes = { "custom-edge": CustomEdge };
@@ -512,7 +513,7 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
 
   // Pasting an image from the clipboard (e.g. a copied screenshot) onto the canvas
   useEffect(() => {
-    const handlePaste = (event: ClipboardEvent) => {
+    const handlePaste = async (event: ClipboardEvent) => {
       const active = document.activeElement as HTMLElement | null;
       // Don't hijack paste while typing in a text field or the rich text editor
       if (active?.isContentEditable || active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") {
@@ -520,17 +521,20 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
       }
 
       const items = Array.from(event.clipboardData?.items ?? []);
-      const imageFiles = items
+      let imageFiles = items
         .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
         .map((item) => item.getAsFile())
         .filter((f): f is File => f !== null);
 
       if (imageFiles.length === 0) {
-        // No image on the OS clipboard (e.g. the user copied our own nodes
-        // with Ctrl+C), so fall back to the canvas's internal node clipboard.
         event.preventDefault();
-        pasteClipboard();
-        return;
+        imageFiles = await readClipboardImages();
+        if (imageFiles.length === 0) {
+          // No image on the OS clipboard (e.g. the user copied our own nodes
+          // with Ctrl+C), so fall back to the canvas's internal node clipboard.
+          pasteClipboard();
+          return;
+        }
       }
       event.preventDefault();
 
@@ -848,6 +852,12 @@ const GraphCanvasInner = forwardRef<GraphCanvasHandle, GraphCanvasInnerProps>(fu
       if (currentTool !== "select") return;
       const target = event.target as HTMLElement;
       if (target.closest(".react-flow__node, .react-flow__edge")) return;
+
+      // React Flow prevents the browser's normal focus transfer while
+      // starting a pane drag. Explicitly leave the editor so the next paste
+      // is interpreted as a canvas paste rather than an in-node paste.
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.isContentEditable) active.blur();
 
       const pos = screenToFlowPosition({ x: event.clientX, y: event.clientY });
 
